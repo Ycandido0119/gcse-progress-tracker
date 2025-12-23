@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Sum
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
@@ -58,8 +59,8 @@ class Subject(models.Model):
     
     def get_total_study_hours(self):
         """Calculate total hours spent studying this subject."""
-        total = self.study_sessions.aggregate(models.sum('hours_spent'))
-        return total['hours_spent__sum'] or 0
+        result = self.study_sessions.aggregate(total=Sum('hours_spent'))
+        return result['total'] or 0
     
     def get_completion_percentage(self):
         """Calculate overall completion percentage for active roadmap."""

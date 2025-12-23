@@ -1,0 +1,260 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ subject.get_name_display }} - GCSE Progress Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        color: #6B7280;
+        font-size: 0.875rem;
+    }
+
+    .breadcrumb a {
+        color: #3B82F6;
+        text-decoration: none;
+    }
+
+    .subject-header {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .subject-title {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .subject-icon-large {
+        font-size: 3rem;
+    }
+
+    .subject-title h1 {
+        font-size: 2rem;
+        color: #111827;
+    }
+
+    .subject-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .stat-card {
+        background: #F9FAFB;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6B7280;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .section {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 2rem;
+        color: #6B7280;
+    }
+
+    .feedback-content {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .feedback-item h3 {
+        font-size: 1rem;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .feedback-item p {
+        color: #6B7280;
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="breadcrumb">
+    <a href="{% url 'tracker:dashboard' %}">← Back to Dashboard</a>
+</div>
+
+<!-- Subject Header -->
+<div class="subject-header">
+    <div class="subject-title">
+        <span class="subject-icon-large">
+            {% if subject.name == 'maths' %}📊
+            {% elif subject.name == 'english' %}📚
+            {% elif subject.name == 'science' %}🔬
+            {% elif subject.name == 'mandarin' %}🇨🇳
+            {% endif %}
+        </span>
+        <div>
+            <h1>{{ subject.get_name_display }}</h1>
+            {% if latest_goal %}
+            <p style="color: #6B7280;">{{ latest_goal.current_level }} → {{ latest_goal.target_level }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if subject.description %}
+    <p style="color: #6B7280; margin-top: 1rem;">{{ subject.description }}</p>
+    {% endif %}
+
+    <div class="subject-stats">
+        <div class="stat-card">
+            <div class="stat-label">Progress</div>
+            <div class="stat-value">{{ completion_percentage }}%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Study Hours</div>
+            <div class="stat-value">{{ total_hours|floatformat:1 }}h</div>
+        </div>
+        {% if latest_goal %}
+        <div class="stat-card">
+            <div class="stat-label">Days Remaining</div>
+            <div class="stat-value">
+                {% if latest_goal.days_remaining >= 0 %}
+                    {{ latest_goal.days_remaining }}
+                {% else %}
+                    <span style="color: #EF4444;">Overdue</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="actions">
+        <a href="{% url 'tracker:edit_subject' subject.pk %}" class="btn btn-secondary">✏️ Edit Subject</a>
+        <a href="{% url 'tracker:delete_subject' subject.pk %}" class="btn btn-danger">🗑️ Delete</a>
+    </div>
+</div>
+
+<!-- Latest Feedback Section -->
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">📝 Latest Feedback</h2>
+        {% if latest_feedback %}
+        <span style="color: #6B7280; font-size: 0.875rem;">{{ latest_feedback.feedback_date }}</span>
+        {% endif %}
+    </div>
+
+    {% if latest_feedback %}
+    <div class="feedback-content">
+        <div class="feedback-item">
+            <h3>💪 Strengths</h3>
+            <p>{{ latest_feedback.strengths }}</p>
+        </div>
+        <div class="feedback-item">
+            <h3>⚠️ Weaknesses</h3>
+            <p>{{ latest_feedback.weaknesses }}</p>
+        </div>
+        <div class="feedback-item">
+            <h3>🎯 Areas to Improve</h3>
+            <p>{{ latest_feedback.areas_to_improve }}</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-message">
+        <p>No feedback recorded yet.</p>
+        <p style="font-size: 0.875rem; margin-top: 0.5rem;">Add feedback from your teacher to see it here.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Active Roadmap Section -->
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">🗺️ Improvement Roadmap</h2>
+    </div>
+
+    {% if active_roadmap %}
+    <p style="color: #6B7280; margin-bottom: 1rem;">{{ active_roadmap.overview }}</p>
+    <p><strong>{{ active_roadmap.total_steps }} steps</strong> in this roadmap</p>
+    {% else %}
+    <div class="empty-message">
+        <p>No active roadmap yet.</p>
+        <p style="font-size: 0.875rem; margin-top: 0.5rem;">Generate a personalized roadmap to see your improvement plan.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recent Study Sessions Section -->
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">📅 Recent Study Sessions</h2>
+    </div>
+
+    {% if recent_sessions %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for session in recent_sessions %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #F9FAFB; border-radius: 0.5rem;">
+            <div>
+                <strong>{{ session.session_date }}</strong>
+                {% if session.notes %}
+                <p style="color: #6B7280; font-size: 0.875rem; margin-top: 0.25rem;">{{ session.notes }}</p>
+                {% endif %}
+            </div>
+            <div style="font-weight: 700; color: #3B82F6;">{{ session.hours_spent }}h</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-message">
+        <p>No study sessions logged yet.</p>
+        <p style="font-size: 0.875rem; margin-top: 0.5rem;">Start logging your study time to track your effort.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
