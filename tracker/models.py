@@ -121,7 +121,7 @@ class Feedback(models.Model):
     weaknesses = models.TextField(help_text="Areas where the student is struggling.")
     areas_to_improve = models.TextField(help_text="Specific action items from teacher.")
     feedback_date = models.DateField()
-    created_at = models.DateTimeField
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.subject.get_name_display()} feedback - {self.feedback_date}"

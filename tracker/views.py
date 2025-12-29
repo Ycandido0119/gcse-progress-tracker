@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Subject
-from .forms import SubjectForm
+from .models import Subject, Feedback
+from .forms import SubjectForm, FeedbackForm
 
 
 @login_required
@@ -117,3 +117,72 @@ def delete_subject(request, pk):
     }
 
     return render(request, 'tracker/confirm_delete.html', context)
+
+# ==================== FEEDBACK VIEWS ====================
+
+@login_required
+def add_feedback(request, subject_pk):
+    """Add teacher feedback for a subject"""
+    subject = get_object_or_404(Subject, pk=subject_pk, user=request.user)
+
+    if request.method == 'POST':
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            feedback.subject = subject
+            feedback.save()
+            messages.success(request, f'Feedback for {subject.get_name_display()} has been added successfully!')
+            return redirect('tracker:subject_detail', pk=subject.pk)
+    else:
+        form=FeedbackForm()
+
+    context = {
+        'form': form,
+        'subject': subject,
+        'title': f'Add Feedback for {subject.get_name_display()}',
+    }
+
+    return render(request, 'tracker/feedback_form.html', context)
+
+@login_required
+def edit_feedback(request, pk):
+    """Edit existing feedback"""
+    feedback = get_object_or_404(Feedback, pk=pk, subject__user=request.user)
+    subject = feedback.subject
+
+    if request.method == 'POST':
+        form = FeedbackForm(request.POST, instance=feedback)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Feedback for {subject.get_name_display()} has been updated successfully!')
+            return redirect('tracker:subject_detail', pk=subject.pk)
+        
+    else:
+        form = FeedbackForm(instance=feedback)
+
+    context = {
+        'form': form,
+        'subject': subject,
+        'feedback': feedback,
+        'title': f'Edit Feedback for {subject.get_name_display()}',
+    }
+
+    return render(request, 'tracker/feedback_form.html', context)
+
+@login_required
+def delete_feedback(request, pk):
+    """Delete feedback"""
+    feedback = get_object_or_404(Feedback, pk=pk, subject__user=request.user)
+    subject = feedback.subject
+
+    if request.method == 'POST':
+        feedback.delete()
+        messages.success(request, f'Feedback for {subject.get_name_display()} has been deleted.')
+        return redirect('tracker:subject_detail', pk=subject.pk)
+    
+    context = {
+        'feedback': feedback,
+        'subject': subject,
+    }
+
+    return render(request, 'tracker/feedback_confirm_delete.html', context)

@@ -1,0 +1,243 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ title }} - GCSE Progress Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-header {
+        margin-bottom: 2rem;
+    }
+
+    .form-header h1 {
+        font-size: 1.75rem;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-header p {
+        color: #6B7280;
+    }
+
+    .subject-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #DBEAFE;
+        color: #1E40AF;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #374151;
+        font-size: 1.125rem;
+    }
+
+    .form-input,
+    .form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: border-color 0.2s;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+        outline: none;
+        border-color: #3B82F6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    .help-text {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: #6B7280;
+    }
+
+    .error {
+        color: #EF4444;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        color: #6B7280;
+        font-size: 0.875rem;
+    }
+
+    .breadcrumb a {
+        color: #3B82F6;
+        text-decoration: none;
+    }
+
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    .tip-box {
+        background: #F0FDF4;
+        border-left: 4px solid #10B981;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .tip-box strong {
+        color: #065F46;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .tip-box ul {
+        color: #065F46;
+        margin-left: 1.5rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="breadcrumb">
+    <a href="{% url 'tracker:dashboard' %}">Dashboard</a> / 
+    <a href="{% url 'tracker:subject_detail' subject.pk %}">{{ subject.get_name_display }}</a> / 
+    <span>{{ title }}</span>
+</div>
+
+<!-- Form Container -->
+<div class="form-container">
+    <div class="form-header">
+        <div class="subject-badge">
+            {% if subject.name == 'maths' %}📊
+            {% elif subject.name == 'english' %}📚
+            {% elif subject.name == 'science' %}🔬
+            {% elif subject.name == 'mandarin' %}🇨🇳
+            {% endif %}
+            {{ subject.get_name_display }}
+        </div>
+        <h1>{{ title }}</h1>
+        <p>Record feedback from your teacher to track areas of strength and improvement</p>
+    </div>
+
+    <div class="tip-box">
+        <strong>💡 Tips for recording feedback:</strong>
+        <ul>
+            <li>Write what the teacher specifically mentioned</li>
+            <li>Include examples where possible</li>
+            <li>Note any specific topics or skills mentioned</li>
+            <li>Record action items that can be worked on</li>
+        </ul>
+    </div>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        
+        <!-- Feedback Date Field -->
+        <div class="form-group">
+            <label for="{{ form.feedback_date.id_for_label }}" class="form-label">
+                {{ form.feedback_date.label }}
+            </label>
+            {{ form.feedback_date }}
+            {% if form.feedback_date.errors %}
+            <div class="error">
+                {{ form.feedback_date.errors|first }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Strengths Field -->
+        <div class="form-group">
+            <label for="{{ form.strengths.id_for_label }}" class="form-label">
+                {{ form.strengths.label }}
+            </label>
+            {{ form.strengths }}
+            <span class="help-text">What did the teacher praise? What is the student doing well?</span>
+            {% if form.strengths.errors %}
+            <div class="error">
+                {{ form.strengths.errors|first }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Weaknesses Field -->
+        <div class="form-group">
+            <label for="{{ form.weaknesses.id_for_label }}" class="form-label">
+                {{ form.weaknesses.label }}
+            </label>
+            {{ form.weaknesses }}
+            <span class="help-text">What areas need improvement? Where is the student struggling?</span>
+            {% if form.weaknesses.errors %}
+            <div class="error">
+                {{ form.weaknesses.errors|first }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Areas to Improve Field -->
+        <div class="form-group">
+            <label for="{{ form.areas_to_improve.id_for_label }}" class="form-label">
+                {{ form.areas_to_improve.label }}
+            </label>
+            {{ form.areas_to_improve }}
+            <span class="help-text">Specific action items from teacher. What should the student focus on?</span>
+            {% if form.areas_to_improve.errors %}
+            <div class="error">
+                {{ form.areas_to_improve.errors|first }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Non-field errors -->
+        {% if form.non_field_errors %}
+        <div class="error">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <a href="{% url 'tracker:subject_detail' subject.pk %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                {% if feedback %}Update Feedback{% else %}Add Feedback{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

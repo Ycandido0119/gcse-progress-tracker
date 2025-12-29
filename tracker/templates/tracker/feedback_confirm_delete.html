@@ -1,0 +1,138 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Delete Feedback - GCSE Progress Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .warning-icon {
+        font-size: 4rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .delete-container h1 {
+        font-size: 1.75rem;
+        color: #111827;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .subject-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #DBEAFE;
+        color: #1E40AF;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .feedback-preview {
+        background: #F9FAFB;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 1.5rem 0;
+        font-size: 0.875rem;
+    }
+
+    .feedback-preview p {
+        color: #6B7280;
+        margin-bottom: 0.5rem;
+    }
+
+    .feedback-preview strong {
+        color: #374151;
+    }
+
+    .warning-message {
+        background: #FEF3C7;
+        border-left: 4px solid #F59E0B;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 1.5rem 0;
+        color: #92400E;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        color: #6B7280;
+        font-size: 0.875rem;
+    }
+
+    .breadcrumb a {
+        color: #3B82F6;
+        text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="breadcrumb">
+    <a href="{% url 'tracker:subject_detail' subject.pk %}">← Back to {{ subject.get_name_display }}</a>
+</div>
+
+<!-- Delete Confirmation -->
+<div class="delete-container">
+    <div class="warning-icon">⚠️</div>
+    
+    <div style="text-align: center;">
+        <div class="subject-badge">
+            {% if subject.name == 'maths' %}📊
+            {% elif subject.name == 'english' %}📚
+            {% elif subject.name == 'science' %}🔬
+            {% elif subject.name == 'mandarin' %}🇨🇳
+            {% endif %}
+            {{ subject.get_name_display }}
+        </div>
+    </div>
+    
+    <h1>Delete Feedback?</h1>
+    
+    <p style="text-align: center; color: #6B7280; margin-bottom: 1.5rem;">
+        Are you sure you want to delete this feedback? This action cannot be undone.
+    </p>
+
+    <div class="feedback-preview">
+        <p><strong>Date:</strong> {{ feedback.feedback_date }}</p>
+        <p><strong>Strengths:</strong> {{ feedback.strengths|truncatewords:15 }}</p>
+        <p><strong>Weaknesses:</strong> {{ feedback.weaknesses|truncatewords:15 }}</p>
+    </div>
+
+    <div class="warning-message">
+        <strong>⚠️ Warning:</strong> This feedback and all its content will be permanently deleted.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-actions">
+            <a href="{% url 'tracker:subject_detail' subject.pk %}" class="btn btn-secondary" style="flex: 1;">
+                Cancel
+            </a>
+            <button type="submit" class="btn btn-danger" style="flex: 1;">
+                🗑️ Yes, Delete Feedback
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

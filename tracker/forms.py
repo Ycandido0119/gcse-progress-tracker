@@ -1,5 +1,5 @@
 from django import forms
-from .models import Subject
+from .models import Subject, Feedback
 
 
 class SubjectForm(forms.ModelForm):
@@ -58,3 +58,36 @@ class SubjectForm(forms.ModelForm):
             )
         
         return name
+    
+class FeedbackForm(forms.ModelForm):
+    """Form for creating and editing teacher feedback"""
+    class Meta:
+        model = Feedback
+        fields = ['strengths', 'weaknesses', 'areas_to_improve', 'feedback_date']
+        widgets = {
+            'strengths': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'What did the teacher praise? What is the student doing well?',
+            }),
+            'weaknesses': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'What areas need improvement? Where is the student struggling?',
+            }),
+            'areas_to_improve': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'Specific action items from teacher. What should the student focus on?',
+            }),
+            'feedback_date': forms.DateInput(attrs={
+                'class': 'form-input',
+                'type': 'date',
+            })
+        }
+        labels = {
+            'strengths': '💪 Strengths *',
+            'weaknesses': '⚠️ Weaknesses *',
+            'areas_to_improve': '🎯 Areas to Improve *',
+            'feedback_date': 'Feedback Date *',
+        }

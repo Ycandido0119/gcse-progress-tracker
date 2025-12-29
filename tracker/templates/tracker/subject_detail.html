@@ -184,27 +184,45 @@
 <!-- Latest Feedback Section -->
 <div class="section">
     <div class="section-header">
-        <h2 class="section-title">📝 Latest Feedback</h2>
-        {% if latest_feedback %}
-        <span style="color: #6B7280; font-size: 0.875rem;">{{ latest_feedback.feedback_date }}</span>
-        {% endif %}
+        <h2 class="section-title">📝 Teacher Feedback</h2>
+        <a href="{% url 'tracker:add_feedback' subject.pk %}" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+            ➕ Add Feedback
+        </a>
     </div>
 
-    {% if latest_feedback %}
-    <div class="feedback-content">
-        <div class="feedback-item">
-            <h3>💪 Strengths</h3>
-            <p>{{ latest_feedback.strengths }}</p>
+    {% if feedbacks %}
+        {% for feedback in feedbacks %}
+        <div style="background: #F9FAFB; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 4px solid #3B82F6;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span style="color: #6B7280; font-size: 0.875rem;">
+                    📅 {{ feedback.feedback_date }}
+                </span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <a href="{% url 'tracker:edit_feedback' feedback.pk %}" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
+                        ✏️ Edit
+                    </a>
+                    <a href="{% url 'tracker:delete_feedback' feedback.pk %}" class="btn btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
+                        🗑️ Delete
+                    </a>
+                </div>
+            </div>
+            
+            <div class="feedback-content">
+                <div class="feedback-item">
+                    <h3>💪 Strengths</h3>
+                    <p>{{ feedback.strengths }}</p>
+                </div>
+                <div class="feedback-item">
+                    <h3>⚠️ Weaknesses</h3>
+                    <p>{{ feedback.weaknesses }}</p>
+                </div>
+                <div class="feedback-item">
+                    <h3>🎯 Areas to Improve</h3>
+                    <p>{{ feedback.areas_to_improve }}</p>
+                </div>
+            </div>
         </div>
-        <div class="feedback-item">
-            <h3>⚠️ Weaknesses</h3>
-            <p>{{ latest_feedback.weaknesses }}</p>
-        </div>
-        <div class="feedback-item">
-            <h3>🎯 Areas to Improve</h3>
-            <p>{{ latest_feedback.areas_to_improve }}</p>
-        </div>
-    </div>
+        {% endfor %}
     {% else %}
     <div class="empty-message">
         <p>No feedback recorded yet.</p>
