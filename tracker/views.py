@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Subject, Feedback
-from .forms import SubjectForm, FeedbackForm
+from .models import Subject, Feedback, TermGoal
+from .forms import SubjectForm, FeedbackForm, TermGoalForm
 
 
 @login_required
@@ -186,3 +186,66 @@ def delete_feedback(request, pk):
     }
 
     return render(request, 'tracker/feedback_confirm_delete.html', context)
+
+@login_required
+def add_term_goal(request, subject_pk):
+    """Add a term goal for a subject"""
+    subject = get_object_or_404(Subject, pk=subject_pk, user=request.user)
+
+    if request.method == 'POST':
+        form = TermGoalForm(request.POST)
+        if form.is_valid():
+            term_goal = form.save(commit=False)
+            term_goal.subject = subject
+            term_goal.save()
+            messages.success(
+                request,
+                f'Term goal set: Level {term_goal.current_level} → {term_goal.target_level} '
+                f'by {term_goal.deadline.strftime("%B %d %Y")}'
+            )
+            return redirect('tracker:subject_detail', pk=subject.pk)
+    else:
+        form = TermGoalForm()
+
+    return render(request, 'tracker/termgoal_form.html', {
+        'form': form,
+        'subject': subject,
+        'title': f'Set Term Goal for {subject.get_name_display()}'
+    })
+
+@login_required
+def edit_term_goal(request, pk):
+    """Edit an existing term goal"""
+    term_goal = get_object_or_404(TermGoal, pk=pk, subject__user=request.user)
+
+    if request.method == 'POST':
+        form = TermGoalForm(request.POST, instance=term_goal)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Term goal has been updated!')
+            return redirect('tracker:subject_detail', pk=term_goal.subject.pk)
+    else:
+        form = TermGoalForm(instance=term_goal)
+
+    return render(request, 'tracker/termgoal_form.html', {
+        'form': form,
+        'subject': term_goal.subject,
+        'title': f'Edit Term Goal for {term_goal.subject.get_name_display()}',
+        'term_goal': term_goal
+    })
+
+@login_required
+def delete_term_goal(request, pk):
+    """Delete a term goal"""
+    term_goal = get_object_or_404(TermGoal, pk=pk, subject__user=request.user)
+    subject = term_goal.subject
+
+    if request.method == 'POST':
+        term_goal.delete()
+        messages.success(request, 'Term goal has been deleted.')
+        return redirect('tracker:subject_detail', pk=subject.pk)
+    
+    return render(request, 'tracker/termgoal_confirm_delete.html', {
+        'term_goal': term_goal,
+        'subject': subject
+    })

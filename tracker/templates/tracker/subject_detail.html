@@ -1,115 +1,225 @@
 {% extends 'tracker/base.html' %}
 
-{% block title %}{{ subject.get_name_display }} - GCSE Progress Tracker{% endblock %}
+{% block title %}{{ subject.get_name_display }} - Details{% endblock %}
 
 {% block extra_css %}
 <style>
-    .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 2rem;
-        color: #6B7280;
-        font-size: 0.875rem;
-    }
-
-    .breadcrumb a {
-        color: #3B82F6;
-        text-decoration: none;
-    }
-
     .subject-header {
-        background: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
         padding: 2rem;
         border-radius: 1rem;
         margin-bottom: 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .subject-title {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .subject-icon-large {
-        font-size: 3rem;
-    }
-
-    .subject-title h1 {
         font-size: 2rem;
-        color: #111827;
+        margin-bottom: 0.5rem;
     }
 
     .subject-stats {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 1rem;
-        margin-top: 1.5rem;
+        margin-top: 1rem;
     }
 
     .stat-card {
-        background: #F9FAFB;
+        background: rgba(255, 255, 255, 0.2);
         padding: 1rem;
         border-radius: 0.5rem;
-    }
-
-    .stat-label {
-        font-size: 0.875rem;
-        color: #6B7280;
-        margin-bottom: 0.25rem;
+        text-align: center;
     }
 
     .stat-value {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #111827;
     }
 
-    .actions {
-        display: flex;
-        gap: 1rem;
-        margin-top: 1.5rem;
-        flex-wrap: wrap;
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
     }
 
     .section {
         background: white;
-        padding: 2rem;
+        padding: 1.5rem;
         border-radius: 1rem;
         margin-bottom: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .section-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #E5E7EB;
     }
 
     .section-title {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
+        font-weight: 700;
         color: #111827;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
     }
 
-    .empty-message {
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        cursor: pointer;
+        border: none;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: #3B82F6;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2563EB;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: #6B7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4B5563;
+    }
+
+    .btn-danger {
+        background: #DC2626;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #B91C1C;
+    }
+
+    .empty-state {
         text-align: center;
-        padding: 2rem;
+        padding: 3rem 1rem;
         color: #6B7280;
     }
 
-    .feedback-content {
-        display: grid;
-        gap: 1.5rem;
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
     }
 
-    .feedback-item h3 {
-        font-size: 1rem;
+    /* Term Goals Styles */
+    .goal-card {
+        background: #F9FAFB;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #3B82F6;
+    }
+
+    .goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .goal-term {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .goal-deadline {
+        font-size: 0.875rem;
+        color: #6B7280;
+    }
+
+    .goal-overdue {
+        color: #DC2626;
+        font-weight: 600;
+    }
+
+    .goal-levels {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .level-badge {
+        background: white;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.5rem;
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: #1E40AF;
+        border: 2px solid #DBEAFE;
+    }
+
+    .goal-arrow {
+        font-size: 1.5rem;
+        color: #10B981;
+    }
+
+    .progress-bar {
+        background: #E5E7EB;
+        height: 1.5rem;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+
+    .progress-fill {
+        background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);
+        height: 100%;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .goal-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    /* Feedback Styles */
+    .feedback-card {
+        background: #F9FAFB;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #8B5CF6;
+    }
+
+    .feedback-date {
+        color: #6B7280;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+
+    .feedback-section {
+        margin-bottom: 1rem;
+    }
+
+    .feedback-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .feedback-label {
+        font-weight: 700;
         color: #374151;
         margin-bottom: 0.5rem;
         display: flex;
@@ -117,162 +227,219 @@
         gap: 0.5rem;
     }
 
-    .feedback-item p {
-        color: #6B7280;
+    .feedback-text {
+        color: #111827;
         line-height: 1.6;
+        padding-left: 1.75rem;
+    }
+
+    .feedback-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    /* Study Sessions Styles */
+    .session-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .session-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #F9FAFB;
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .session-date {
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .session-hours {
+        color: #3B82F6;
+        font-weight: 700;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Breadcrumb -->
-<div class="breadcrumb">
-    <a href="{% url 'tracker:dashboard' %}">← Back to Dashboard</a>
-</div>
-
-<!-- Subject Header -->
 <div class="subject-header">
-    <div class="subject-title">
-        <span class="subject-icon-large">
-            {% if subject.name == 'maths' %}📊
-            {% elif subject.name == 'english' %}📚
-            {% elif subject.name == 'science' %}🔬
-            {% elif subject.name == 'mandarin' %}🇨🇳
-            {% endif %}
-        </span>
-        <div>
-            <h1>{{ subject.get_name_display }}</h1>
-            {% if latest_goal %}
-            <p style="color: #6B7280;">{{ latest_goal.current_level }} → {{ latest_goal.target_level }}</p>
-            {% endif %}
-        </div>
-    </div>
-
+    <h1 class="subject-title">{{ subject.get_name_display }}</h1>
     {% if subject.description %}
-    <p style="color: #6B7280; margin-top: 1rem;">{{ subject.description }}</p>
+    <p>{{ subject.description }}</p>
     {% endif %}
-
+    
     <div class="subject-stats">
         <div class="stat-card">
+            <div class="stat-value">{{ total_hours }}</div>
+            <div class="stat-label">Hours Studied</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ completion }}%</div>
             <div class="stat-label">Progress</div>
-            <div class="stat-value">{{ completion_percentage }}%</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Total Study Hours</div>
-            <div class="stat-value">{{ total_hours|floatformat:1 }}h</div>
+            <div class="stat-value">{{ feedbacks|length }}</div>
+            <div class="stat-label">Feedback Entries</div>
         </div>
-        {% if latest_goal %}
         <div class="stat-card">
-            <div class="stat-label">Days Remaining</div>
-            <div class="stat-value">
-                {% if latest_goal.days_remaining >= 0 %}
-                    {{ latest_goal.days_remaining }}
-                {% else %}
-                    <span style="color: #EF4444;">Overdue</span>
-                {% endif %}
-            </div>
+            <div class="stat-value">{{ term_goals|length }}</div>
+            <div class="stat-label">Term Goals</div>
         </div>
-        {% endif %}
     </div>
 
-    <div class="actions">
-        <a href="{% url 'tracker:edit_subject' subject.pk %}" class="btn btn-secondary">✏️ Edit Subject</a>
-        <a href="{% url 'tracker:delete_subject' subject.pk %}" class="btn btn-danger">🗑️ Delete</a>
+    <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem;">
+        <a href="{% url 'tracker:edit_subject' subject.pk %}" class="btn btn-secondary">
+            ✏️ Edit Subject
+        </a>
+        <a href="{% url 'tracker:delete_subject' subject.pk %}" class="btn btn-danger">
+            🗑️ Delete
+        </a>
     </div>
 </div>
 
-<!-- Latest Feedback Section -->
+<!-- Term Goals Section -->
 <div class="section">
     <div class="section-header">
-        <h2 class="section-title">📝 Teacher Feedback</h2>
-        <a href="{% url 'tracker:add_feedback' subject.pk %}" class="btn btn-primary" style="padding: 0.5rem 1rem;">
-            ➕ Add Feedback
+        <h2 class="section-title">🎯 Term Goals</h2>
+        <a href="{% url 'tracker:add_term_goal' subject.pk %}" class="btn btn-primary">
+            + Add Goal
+        </a>
+    </div>
+
+    {% if term_goals %}
+        {% for goal in term_goals %}
+        <div class="goal-card">
+            <div class="goal-header">
+                <div>
+                    <div class="goal-term">{{ goal.term }}</div>
+                    <div class="goal-deadline {% if goal.is_overdue %}goal-overdue{% endif %}">
+                        ⏰ Deadline: {{ goal.deadline|date:"F d, Y" }}
+                        {% if goal.is_overdue %}(Overdue){% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="goal-levels">
+                <span class="level-badge">Level {{ goal.current_level }}</span>
+                <span class="goal-arrow">→</span>
+                <span class="level-badge">Level {{ goal.target_level }}</span>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ goal.calculate_progress }}%">
+                    {{ goal.calculate_progress }}%
+                </div>
+            </div>
+
+            <div class="goal-actions">
+                <a href="{% url 'tracker:edit_term_goal' goal.pk %}" class="btn btn-secondary">
+                    ✏️ Edit
+                </a>
+                <a href="{% url 'tracker:delete_term_goal' goal.pk %}" class="btn btn-danger">
+                    🗑️ Delete
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">🎯</div>
+            <h3>No Term Goals Yet</h3>
+            <p>Set a goal to track your progress toward your target level!</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Teacher Feedback Section -->
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">💭 Teacher Feedback</h2>
+        <a href="{% url 'tracker:add_feedback' subject.pk %}" class="btn btn-primary">
+            + Add Feedback
         </a>
     </div>
 
     {% if feedbacks %}
         {% for feedback in feedbacks %}
-        <div style="background: #F9FAFB; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 4px solid #3B82F6;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <span style="color: #6B7280; font-size: 0.875rem;">
-                    📅 {{ feedback.feedback_date }}
-                </span>
-                <div style="display: flex; gap: 0.5rem;">
-                    <a href="{% url 'tracker:edit_feedback' feedback.pk %}" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
-                        ✏️ Edit
-                    </a>
-                    <a href="{% url 'tracker:delete_feedback' feedback.pk %}" class="btn btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
-                        🗑️ Delete
-                    </a>
-                </div>
+        <div class="feedback-card">
+            <div class="feedback-date">
+                📅 {{ feedback.feedback_date|date:"F d, Y" }}
             </div>
-            
-            <div class="feedback-content">
-                <div class="feedback-item">
-                    <h3>💪 Strengths</h3>
-                    <p>{{ feedback.strengths }}</p>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    💪 <strong>Strengths</strong>
                 </div>
-                <div class="feedback-item">
-                    <h3>⚠️ Weaknesses</h3>
-                    <p>{{ feedback.weaknesses }}</p>
+                <div class="feedback-text">{{ feedback.strengths }}</div>
+            </div>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    ⚠️ <strong>Weaknesses</strong>
                 </div>
-                <div class="feedback-item">
-                    <h3>🎯 Areas to Improve</h3>
-                    <p>{{ feedback.areas_to_improve }}</p>
+                <div class="feedback-text">{{ feedback.weaknesses }}</div>
+            </div>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    🎯 <strong>Areas to Improve</strong>
                 </div>
+                <div class="feedback-text">{{ feedback.areas_to_improve }}</div>
+            </div>
+
+            <div class="feedback-actions">
+                <a href="{% url 'tracker:edit_feedback' feedback.pk %}" class="btn btn-secondary">
+                    ✏️ Edit
+                </a>
+                <a href="{% url 'tracker:delete_feedback' feedback.pk %}" class="btn btn-danger">
+                    🗑️ Delete
+                </a>
             </div>
         </div>
         {% endfor %}
     {% else %}
-    <div class="empty-message">
-        <p>No feedback recorded yet.</p>
-        <p style="font-size: 0.875rem; margin-top: 0.5rem;">Add feedback from your teacher to see it here.</p>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Active Roadmap Section -->
-<div class="section">
-    <div class="section-header">
-        <h2 class="section-title">🗺️ Improvement Roadmap</h2>
-    </div>
-
-    {% if active_roadmap %}
-    <p style="color: #6B7280; margin-bottom: 1rem;">{{ active_roadmap.overview }}</p>
-    <p><strong>{{ active_roadmap.total_steps }} steps</strong> in this roadmap</p>
-    {% else %}
-    <div class="empty-message">
-        <p>No active roadmap yet.</p>
-        <p style="font-size: 0.875rem; margin-top: 0.5rem;">Generate a personalized roadmap to see your improvement plan.</p>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Recent Study Sessions Section -->
-<div class="section">
-    <div class="section-header">
-        <h2 class="section-title">📅 Recent Study Sessions</h2>
-    </div>
-
-    {% if recent_sessions %}
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
-        {% for session in recent_sessions %}
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #F9FAFB; border-radius: 0.5rem;">
-            <div>
-                <strong>{{ session.session_date }}</strong>
-                {% if session.notes %}
-                <p style="color: #6B7280; font-size: 0.875rem; margin-top: 0.25rem;">{{ session.notes }}</p>
-                {% endif %}
-            </div>
-            <div style="font-weight: 700; color: #3B82F6;">{{ session.hours_spent }}h</div>
+        <div class="empty-state">
+            <div class="empty-icon">💭</div>
+            <h3>No Feedback Yet</h3>
+            <p>Add teacher feedback from parents' evening to track areas for improvement.</p>
         </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-message">
-        <p>No study sessions logged yet.</p>
-        <p style="font-size: 0.875rem; margin-top: 0.5rem;">Start logging your study time to track your effort.</p>
-    </div>
     {% endif %}
+</div>
+
+<!-- Recent Study Sessions -->
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">📚 Recent Study Sessions</h2>
+    </div>
+
+    {% if study_sessions %}
+        <ul class="session-list">
+            {% for session in study_sessions %}
+            <li class="session-item">
+                <span class="session-date">{{ session.session_date|date:"M d, Y" }}</span>
+                <span class="session-hours">{{ session.hours_spent }} hours</span>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📚</div>
+            <h3>No Study Sessions Yet</h3>
+            <p>Start logging your study time to track your progress!</p>
+        </div>
+    {% endif %}
+</div>
+
+<div style="text-align: center; margin-top: 2rem;">
+    <a href="{% url 'tracker:dashboard' %}" class="btn btn-secondary">
+        ← Back to Dashboard
+    </a>
 </div>
 {% endblock %}

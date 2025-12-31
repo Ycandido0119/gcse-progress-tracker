@@ -17,4 +17,9 @@ urlpatterns = [
     path('subjects/<int:subject_pk>/feedback/add/', views.add_feedback, name='add_feedback'),
     path('feedback/<int:pk>/edit/', views.edit_feedback, name='edit_feedback'),
     path('feedback/<int:pk>/delete/', views.delete_feedback, name='delete_feedback'),
+
+    # Term Goal URLS
+    path('subjects/<int:subject_pk>/goals/add', views.add_term_goal, name='add_term_goal'),
+    path('goals/<int:pk>/edit/', views.edit_term_goal, name='edit_term_goal'),
+    path('goals/<int:pk>/delete/', views.delete_term_goal, name='delete_term_goal'),
 ]

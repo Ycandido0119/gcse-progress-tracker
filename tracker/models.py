@@ -110,6 +110,11 @@ class TermGoal(models.Model):
         """check if deadline has passed"""
         return timezone.now().date() > self.deadline
     
+    def calculate_progress(self):
+        """Calculate progress toward goal as a percentage"""
+        # For now returns 0% - can be enhanced later with actual progress tracking
+        return 0
+    
     class Meta:
         ordering = ['-created_at']
 

@@ -1,5 +1,6 @@
 from django import forms
-from .models import Subject, Feedback
+from datetime import date
+from .models import Subject, Feedback, TermGoal
 
 
 class SubjectForm(forms.ModelForm):
@@ -59,8 +60,10 @@ class SubjectForm(forms.ModelForm):
         
         return name
     
+
 class FeedbackForm(forms.ModelForm):
     """Form for creating and editing teacher feedback"""
+    
     class Meta:
         model = Feedback
         fields = ['strengths', 'weaknesses', 'areas_to_improve', 'feedback_date']
@@ -91,3 +94,55 @@ class FeedbackForm(forms.ModelForm):
             'areas_to_improve': '🎯 Areas to Improve *',
             'feedback_date': 'Feedback Date *',
         }
+
+
+class TermGoalForm(forms.ModelForm):
+    """Form for creating and editing term goals"""
+    
+    class Meta:
+        model = TermGoal
+        fields = ['term', 'current_level', 'target_level', 'deadline']
+        widgets = {
+            'term': forms.Select(attrs={
+                'class': 'form-input',
+            }),
+            'current_level': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'e.g., Grade 5, Level 3',
+                'maxlength': 50,
+            }),
+            'target_level': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'e.g., Grade 7, Level 5',
+                'maxlength': 50,
+            }),
+            'deadline': forms.DateInput(attrs={
+                'class': 'form-input',
+                'type': 'date',
+            }),
+        }
+        labels = {
+            'term': '📅 Term *',
+            'current_level': '📊 Current Level *',
+            'target_level': '🎯 Target Level *',
+            'deadline': '⏰ Deadline *',
+        }
+        help_texts = {
+            'current_level': 'Your current grade/level (e.g., Grade 5, Level 3)',
+            'target_level': 'The grade/level you want to achieve (e.g., Grade 7, Level 5)',
+            'deadline': 'When do you need to reach this goal?',
+        }
+
+    def clean(self):
+        """Validate deadline is in future for new goals"""
+        cleaned_data = super().clean()
+        deadline = cleaned_data.get('deadline')
+
+        # Validate deadline is in future (unless editing existing goal)
+        if deadline and not self.instance.pk:
+            if deadline < date.today():
+                raise forms.ValidationError(
+                    'Deadline must be in the future. Choose a date that gives you time to achieve your goal.'
+                )
+
+        return cleaned_data

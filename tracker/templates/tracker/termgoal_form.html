@@ -1,0 +1,312 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .form-header h1 {
+        font-size: 1.75rem;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .subject-badge {
+        display: inline-block;
+        background: #DBEAFE;
+        color: #1E40AF;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #374151;
+        font-size: 0.95rem;
+    }
+
+    .help-text {
+        display: block;
+        font-size: 0.875rem;
+        color: #6B7280;
+        margin-top: 0.25rem;
+    }
+
+    .form-input,
+    .form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: all 0.2s;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+        outline: none;
+        border-color: #3B82F6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .error {
+        background: #FEE2E2;
+        color: #991B1B;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #EF4444;
+    }
+
+    .error ul {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+
+    .field-errors {
+        color: #DC2626;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: #3B82F6;
+        color: white;
+        flex: 1;
+    }
+
+    .btn-primary:hover {
+        background: #2563EB;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: #6B7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4B5563;
+    }
+
+    .info-box {
+        background: #EFF6FF;
+        border-left: 4px solid #3B82F6;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-box p {
+        margin: 0;
+        color: #1E40AF;
+        font-size: 0.875rem;
+    }
+
+    .goal-preview {
+        background: #F3F4F6;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-top: 1.5rem;
+        text-align: center;
+    }
+
+    .goal-preview h3 {
+        margin: 0 0 0.5rem 0;
+        color: #374151;
+        font-size: 1rem;
+    }
+
+    .goal-arrow {
+        font-size: 2rem;
+        color: #10B981;
+        margin: 0.5rem;
+    }
+
+    .level-display {
+        display: inline-block;
+        background: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <h1>{{ title }}</h1>
+        <div class="subject-badge">
+            📚 {{ subject.get_name_display }}
+        </div>
+    </div>
+
+    <div class="info-box">
+        <p>
+            <strong>💡 Pro Tip:</strong> Set realistic goals! Aim to improve by 1-2 levels per term. 
+            Track your progress and adjust your study plan accordingly.
+        </p>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="error">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <form method="post" id="goal-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.term.id_for_label }}" class="form-label">
+                {{ form.term.label }}
+            </label>
+            {{ form.term }}
+            {% if form.term.help_text %}
+            <small class="help-text">{{ form.term.help_text }}</small>
+            {% endif %}
+            {% if form.term.errors %}
+            <div class="field-errors">
+                {{ form.term.errors }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.current_level.id_for_label }}" class="form-label">
+                {{ form.current_level.label }}
+            </label>
+            {{ form.current_level }}
+            {% if form.current_level.help_text %}
+            <small class="help-text">{{ form.current_level.help_text }}</small>
+            {% endif %}
+            {% if form.current_level.errors %}
+            <div class="field-errors">
+                {{ form.current_level.errors }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.target_level.id_for_label }}" class="form-label">
+                {{ form.target_level.label }}
+            </label>
+            {{ form.target_level }}
+            {% if form.target_level.help_text %}
+            <small class="help-text">{{ form.target_level.help_text }}</small>
+            {% endif %}
+            {% if form.target_level.errors %}
+            <div class="field-errors">
+                {{ form.target_level.errors }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.deadline.id_for_label }}" class="form-label">
+                {{ form.deadline.label }}
+            </label>
+            {{ form.deadline }}
+            {% if form.deadline.help_text %}
+            <small class="help-text">{{ form.deadline.help_text }}</small>
+            {% endif %}
+            {% if form.deadline.errors %}
+            <div class="field-errors">
+                {{ form.deadline.errors }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="goal-preview" id="goal-preview" style="display: none;">
+            <h3>Your Goal:</h3>
+            <span class="level-display" id="current-display">-</span>
+            <span class="goal-arrow">→</span>
+            <span class="level-display" id="target-display">-</span>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {% if term_goal %}
+                    💾 Update Goal
+                {% else %}
+                    🎯 Set Goal
+                {% endif %}
+            </button>
+            <a href="{% url 'tracker:subject_detail' subject.pk %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Live preview of goal
+    const currentInput = document.getElementById('{{ form.current_level.id_for_label }}');
+    const targetInput = document.getElementById('{{ form.target_level.id_for_label }}');
+    const goalPreview = document.getElementById('goal-preview');
+    const currentDisplay = document.getElementById('current-display');
+    const targetDisplay = document.getElementById('target-display');
+
+    function updatePreview() {
+        const current = currentInput.value;
+        const target = targetInput.value;
+
+        if (current && target) {
+            currentDisplay.textContent = `Level ${current}`;
+            targetDisplay.textContent = `Level ${target}`;
+            goalPreview.style.display = 'block';
+        } else {
+            goalPreview.style.display = 'none';
+        }
+    }
+
+    currentInput.addEventListener('input', updatePreview);
+    targetInput.addEventListener('input', updatePreview);
+
+    // Initial preview if editing
+    updatePreview();
+</script>
+{% endblock %}
