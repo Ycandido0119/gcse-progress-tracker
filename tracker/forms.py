@@ -1,6 +1,6 @@
 from django import forms
 from datetime import date
-from .models import Subject, Feedback, TermGoal
+from .models import Subject, Feedback, TermGoal, StudySession
 
 
 class SubjectForm(forms.ModelForm):
@@ -146,3 +146,63 @@ class TermGoalForm(forms.ModelForm):
                 )
 
         return cleaned_data
+    
+class StudySessionForm(forms.ModelForm):
+    """Form for creating and editing study sessions"""
+
+    class Meta:
+        model = StudySession
+        fields = ['session_date', 'hours_spent', 'notes']
+        widgets = {
+            'session_date': forms.DateInput(attrs={
+                'class': 'form-input',
+                'type': 'date',
+            }),
+            'hours_spent': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'min': '0.1',
+                'max': '24.0',
+                'placeholder': 'e.g., 1.5',
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'Optional: What did you study? Any notes about this session...',
+            }),
+        }
+        labels = {
+            'session_date': '📅 Study Date *',
+            'hours_spent': '⏱️ Hours Spent *',
+            'notes': '📝 Notes (Optional)',
+        }
+        help_texts = {
+            'session_date': 'When did you study',
+            'hours_spent': 'How many hours did you study? (0.1 - 24.0)',
+            'notes': 'What topics did you cover? Any observations?',
+        }
+    def clean_session_date(self):
+        """Validate that session date is not in the future"""
+        session_date = self.cleaned_data.get('session_date')
+
+        if session_date and session_date > date.today():
+            raise forms.ValidationError(
+                'Study session date cannot be in the future. '
+                'Please enter today\'s date or a past date.'
+            )
+        return session_date
+    
+    def clean_hours_spent(self):
+        """Validate hours spent is within reasonable range"""
+        hours = self.cleaned_data.get('hours_spent')
+
+        if hours is not None:
+            if hours < 0.1:
+                raise forms.ValidationError(
+                    'Hours must be at least 0.1 (6 minutes).'
+                )
+            if hours > 24.0:
+                raise forms.ValidationError(
+                    'Hours cannot exceed 24 in a single session.'
+                )
+            
+        return hours

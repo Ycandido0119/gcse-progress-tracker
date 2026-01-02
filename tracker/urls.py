@@ -22,4 +22,9 @@ urlpatterns = [
     path('subjects/<int:subject_pk>/goals/add', views.add_term_goal, name='add_term_goal'),
     path('goals/<int:pk>/edit/', views.edit_term_goal, name='edit_term_goal'),
     path('goals/<int:pk>/delete/', views.delete_term_goal, name='delete_term_goal'),
+
+    # Study Sessions URLs
+    path('subjects/<int:subject_pk>/sessions/add/', views.add_study_session, name='add_study_session'),
+    path('sessions/<int:pk>/edit/', views.edit_study_session, name='edit_study_session'),
+    path('sessions/<int:pk>/delete/', views.delete_study_session, name='delete_study_session'),
 ]

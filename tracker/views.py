@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Subject, Feedback, TermGoal
-from .forms import SubjectForm, FeedbackForm, TermGoalForm
+from .models import Subject, Feedback, TermGoal, StudySession
+from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm
 
 
 @login_required
@@ -58,25 +58,23 @@ def add_subject(request):
 
 @login_required
 def subject_detail(request, pk):
-    """Detailed view of a single subject."""
+    """View details of a specific subject"""
     subject = get_object_or_404(Subject, pk=pk, user=request.user)
-
-    # Get related data
-    latest_goal = subject.get_latest_term_goal()
-    latest_feedback = subject.feedbacks.order_by('-feedback_date').first()
-    active_roadmap = subject.roadmaps.filter(is_active=True).first()
-    recent_sessions = subject.study_sessions.order_by('-session_date')[:5]
-
+    
+    # Get all related data
+    feedbacks = subject.feedbacks.all().order_by('-feedback_date')
+    term_goals = subject.term_goals.all().order_by('-deadline')
+    study_sessions = subject.study_sessions.all().order_by('-session_date')[:10]
+    
     context = {
         'subject': subject,
-        'latest_goal': latest_goal,
-        'latest_feedback': latest_feedback,
-        'active_roadmap': active_roadmap,
-        'recent_sessions': recent_sessions,
+        'feedbacks': feedbacks,           # ✅ Added
+        'term_goals': term_goals,         # ✅ Added
+        'study_sessions': study_sessions, # ✅ Added
         'total_hours': subject.get_total_study_hours(),
-        'completion_percentage': subject.get_completion_percentage(),
+        'completion': subject.get_completion_percentage(),
     }
-
+    
     return render(request, 'tracker/subject_detail.html', context)
 
 @login_required
@@ -247,5 +245,68 @@ def delete_term_goal(request, pk):
     
     return render(request, 'tracker/termgoal_confirm_delete.html', {
         'term_goal': term_goal,
+        'subject': subject
+    })
+
+@login_required
+def add_study_session(request, subject_pk):
+    """Add a study session for a subject"""
+    subject = get_object_or_404(Subject, pk=subject_pk, user=request.user)
+
+    if request.method == 'POST':
+        form = StudySessionForm(request.POST)
+        if form.is_valid():
+            session = form.save(commit=False)
+            session.user = request.user
+            session.subject = subject
+            session.save()
+            messages.success(
+                request,
+                f'Logged {session.hours_spent} hours for {subject.get_name_display()}!'
+            )
+            return redirect('tracker:subject_detail', pk=subject.pk)
+    else:
+        form = StudySessionForm()
+
+    return render(request, 'tracker/studysession_form.html', {
+        'form': form,
+        'subject': subject,
+        'title': f'Log Study Time for {subject.get_name_display()}'
+    })
+
+@login_required
+def edit_study_session(request, pk):
+    """Edit an existing study session"""
+    session = get_object_or_404(StudySession, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        form = StudySessionForm(request.POST, instance=session)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Study session has been updated!')
+            return redirect('tracker:subject_detail', pk=session.subject.pk)
+    else:
+        form = StudySessionForm(instance=session)
+
+    return render(request, 'tracker/studysession_form.html', {
+        'form': form,
+        'subject': session.subject,
+        'title': f'Edit Study Session for {session.subject.get_name_display()}',
+        'session': session
+    })
+
+@login_required
+def delete_study_session(request, pk):
+    """Delete a study session"""
+    session = get_object_or_404(StudySession, pk=pk, user=request.user)
+    subject = session.subject
+
+    if request.method == 'POST':
+        session.delete()
+        messages.success(request, 'Study session has been deleted.')
+        return redirect('tracker:subject_detail', pk=subject.pk)
+    
+    return render(request, 'tracker/studysession_confirm_delete.html', {
+        'session': session,
         'subject': subject
     })

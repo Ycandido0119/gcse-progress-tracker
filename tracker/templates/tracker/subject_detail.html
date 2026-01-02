@@ -240,12 +240,6 @@
     }
 
     /* Study Sessions Styles */
-    .session-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
     .session-item {
         display: flex;
         justify-content: space-between;
@@ -254,21 +248,43 @@
         background: #F9FAFB;
         border-radius: 0.5rem;
         margin-bottom: 0.75rem;
+        border-left: 3px solid #10B981;
+    }
+
+    .session-info {
+        flex: 1;
     }
 
     .session-date {
         font-weight: 600;
-        color: #374151;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .session-notes {
+        color: #6B7280;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
     }
 
     .session-hours {
-        color: #3B82F6;
         font-weight: 700;
+        color: #10B981;
+        font-size: 1.25rem;
+        margin-right: 1rem;
+    }
+
+    .session-actions {
+        display: flex;
+        gap: 0.5rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
+
+<div class="subject-header">
+    <h1 class="subject-title">{{ subject.get_name_display }}</h1>
 <div class="subject-header">
     <h1 class="subject-title">{{ subject.get_name_display }}</h1>
     {% if subject.description %}
@@ -318,7 +334,7 @@
         <div class="goal-card">
             <div class="goal-header">
                 <div>
-                    <div class="goal-term">{{ goal.term }}</div>
+                    <div class="goal-term">{{ goal.get_term_display }}</div>
                     <div class="goal-deadline {% if goal.is_overdue %}goal-overdue{% endif %}">
                         ⏰ Deadline: {{ goal.deadline|date:"F d, Y" }}
                         {% if goal.is_overdue %}(Overdue){% endif %}
@@ -327,9 +343,9 @@
             </div>
 
             <div class="goal-levels">
-                <span class="level-badge">Level {{ goal.current_level }}</span>
+                <span class="level-badge">{{ goal.current_level }}</span>
                 <span class="goal-arrow">→</span>
-                <span class="level-badge">Level {{ goal.target_level }}</span>
+                <span class="level-badge">{{ goal.target_level }}</span>
             </div>
 
             <div class="progress-bar">
@@ -413,21 +429,35 @@
     {% endif %}
 </div>
 
-<!-- Recent Study Sessions -->
+<!-- Study Sessions Section -->
 <div class="section">
     <div class="section-header">
-        <h2 class="section-title">📚 Recent Study Sessions</h2>
+        <h2 class="section-title">📚 Study Sessions</h2>
+        <a href="{% url 'tracker:add_study_session' subject.pk %}" class="btn btn-primary">
+            + Log Study Time
+        </a>
     </div>
 
     {% if study_sessions %}
-        <ul class="session-list">
-            {% for session in study_sessions %}
-            <li class="session-item">
-                <span class="session-date">{{ session.session_date|date:"M d, Y" }}</span>
-                <span class="session-hours">{{ session.hours_spent }} hours</span>
-            </li>
-            {% endfor %}
-        </ul>
+        {% for session in study_sessions %}
+        <div class="session-item">
+            <div class="session-info">
+                <div class="session-date">📅 {{ session.session_date|date:"l, F d, Y" }}</div>
+                {% if session.notes %}
+                <div class="session-notes">{{ session.notes }}</div>
+                {% endif %}
+            </div>
+            <div class="session-hours">{{ session.hours_spent }}h</div>
+            <div class="session-actions">
+                <a href="{% url 'tracker:edit_study_session' session.pk %}" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">
+                    ✏️ Edit
+                </a>
+                <a href="{% url 'tracker:delete_study_session' session.pk %}" class="btn btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">
+                    🗑️
+                </a>
+            </div>
+        </div>
+        {% endfor %}
     {% else %}
         <div class="empty-state">
             <div class="empty-icon">📚</div>
