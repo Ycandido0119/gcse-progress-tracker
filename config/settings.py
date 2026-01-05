@@ -1,3 +1,9 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+
 """
 Django settings for config project.
 
@@ -24,6 +30,17 @@ SECRET_KEY = "django-insecure-=t&$lgkkpw8evjo+tpr=pyb6=$!tdj9lerrx3x5_qoedeg3_!$
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
+# Anthropic API Configuration
+ANTHROPIC_API_KEY= os.getenv('API_KEY')
+
+# Validate API key
+if not ANTHROPIC_API_KEY:
+    import warnings
+    warnings.warn(
+        "API_KEY not found in .env file. "
+        "AI roadmap generation will not work."
+    )
 
 ALLOWED_HOSTS = []
 

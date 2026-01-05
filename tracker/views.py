@@ -1,7 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Subject, Feedback, TermGoal, StudySession
+from django.db import transaction
+from .models import Subject, Feedback, TermGoal, StudySession, Roadmap, RoadmapStep, ChecklistItem
+from .ai_service import get_ai_service, RoadmapGenerationError
 from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm
 
 
@@ -310,3 +312,220 @@ def delete_study_session(request, pk):
         'session': session,
         'subject': subject
     })
+
+@login_required
+def generate_roadmap(request, subject_pk):
+    """Genereate AI roadmap for a subject"""
+    subject = get_object_or_404(Subject, pk=subject_pk, user=request.user)
+
+    # Get the latest term goal
+    term_goal = subject.term_goals.order_by('-created_at').first()
+
+    if not term_goal:
+        messages.error(
+            request,
+            'Please set a term goal before generating a roadmap.'
+        )
+        return redirect('tracker:subject_detail', pk=subject.pk)
+    
+    # Get all feedback for this subject
+    feedbacks = subject.feedbacks.all()
+
+    if not feedbacks.exists():
+        messages.warning(
+            request,
+            'No teacher feedback found. This roadmap will be less personalised. '
+            'Consider adding feedback first for better results.'
+        )
+
+    if request.method == 'POST':
+        try:
+            # Collect data for AI
+            strengths = []
+            weaknesses = []
+            areas_to_improve = []
+
+            for feedback in feedbacks:
+                if feedback.strengths:
+                    strengths.append(feedback.strengths)
+                if feedback.weaknesses:
+                    weaknesses.append(feedback.weaknesses)
+                if feedback.areas_to_improve:
+                    areas_to_improve.append(feedback.areas_to_improve)
+
+            # Get AI service
+            ai_service = get_ai_service()
+
+            # Generate roadmap
+            roadmap_data = ai_service.generate_roadmap(
+                subject_name=subject.get_name_display(),
+                current_level=term_goal.current_level,
+                target_level=term_goal.target_level,
+                strengths=strengths,
+                weaknesses=weaknesses,
+                areas_to_improve=areas_to_improve,
+                deadline=term_goal.deadline,
+                study_hours_logged=subject.get_total_study_hours()
+            )
+
+            # Save to database (in a transaction for data integrity)
+            with transaction.atomic():
+                # Deactivate old roadmaps
+                Roadmap.objects.filter(
+                    subject=subject,
+                    is_active=True,
+                ).update(is_active=False)
+
+                # Create a new roadmap
+                roadmap = Roadmap.objects.create(
+                    subject=subject,
+                    term_goal=term_goal,
+                    title=roadmap_data['title'],
+                    overview=roadmap_data['overview'],
+                    is_active=True
+                )
+
+                # Create steps and checklist items
+                for step_data in roadmap_data['steps']:
+                    step = RoadmapStep.objects.create(
+                        roadmap=roadmap,
+                        order_number=step_data['order'],
+                        title=step_data['title'],
+                        description=step_data['description'],
+                        category=step_data['category'],
+                        difficulty=step_data['difficulty'],
+                        estimated_hours=step_data['estimated_hours']
+                    )
+
+                    # Create checklist items
+                    for task in step_data['checklist']:
+                        ChecklistItem.objects.create(
+                            roadmap_step=step,
+                            task_description=task
+                        )
+
+                # Update total steps count
+                roadmap.update_total_steps()
+
+            messages.success(
+                request,
+                f'🎉 AI roadmap generated successfully! '
+                f'{roadmap.total_steps} steps created to help you reach {term_goal.target_level}'
+            )
+            return redirect('tracker:roadmap_detail', pk=roadmap.pk)
+        
+        except RoadmapGenerationError as e:
+            messages.error(
+                request,
+                f'Failed to generate roadmap: {str(e)}. Please try again.'
+            )
+        except Exception as e:
+            messages.error(
+                request,
+                f'An unexpected error occurred: {str(e)}. Please try again.'
+            )
+
+    # GET request - show confirmation page
+    context = {
+        'subject': subject,
+        'term_goal': term_goal,
+        'feedback_count': feedbacks.count(),
+        'has_feedback': feedbacks.exists(),
+    }
+
+    return render(request, 'tracker/roadmap_generate.html', context)
+
+
+@login_required
+def roadmap_detail(request, pk):
+    """View a specific roadmap with all its steps"""
+    roadmap = get_object_or_404(
+        Roadmap.objects.select_related('subject', 'term_goal')
+        .prefetch_related('steps__checklist_items'),
+        pk=pk,
+        subject__user=request.user
+    )
+
+    # Calculate progress statistics
+    total_checklist_items = 0
+    completed_checklist_items = 0
+
+    for step in roadmap.steps.all():
+        items = step.checklist_items.all()
+        total_checklist_items += items.count()
+        completed_checklist_items += items.filter(is_completed=True).count()
+
+    completion_percentage = 0
+    if total_checklist_items > 0:
+        completion_percentage = round(
+            (completed_checklist_items / total_checklist_items) * 100,
+            1
+        )
+
+    context = {
+        'roadmap': roadmap,
+        'subject': roadmap.subject,
+        'total_checklist_items': total_checklist_items,
+        'completed_checklist_items': completed_checklist_items,
+        'completion_percentage': completion_percentage,
+    }
+
+    return render(request, 'tracker/roadmap_detail.html', context)
+
+@login_required
+def roadmap_step_detail(request, pk):
+    """View a specific roadmap step in detail"""
+    step = get_object_or_404(
+        RoadmapStep.objects.select_related('roadmap__subject', 'roadmap__term_goal')
+        .prefetch_related('checklist_items', 'resources'),
+        pk=pk,
+        roadmap__subject__user=request.user
+    )
+
+    # Calculate step completion
+    total_items = step.checklist_items.count()
+    completed_items = step.checklist_items.filter(is_completed=True).count()
+    step_completion = 0
+    if total_items > 0:
+        step_completion = round((completed_items / total_items) * 100, 1)
+
+    context = {
+        'step': step,
+        'roadmap': step.roadmap,
+        'subject': step.roadmap.subject,
+        'total_items': total_items,
+        'completed_items': completed_items,
+        'step_completion': step_completion,
+    }
+
+    return render(request, 'tracker/roadmap_step_detail.html', context)
+
+
+@login_required
+def delete_roadmap(request, pk):
+    """Delete a roadmap"""
+    roadmap = get_object_or_404(
+        Roadmap,
+        pk=pk,
+        subject__user=request.user
+    )
+    subject = roadmap.subject
+
+    if request.method == 'POST':
+        roadmap_title = roadmap.title
+        roadmap.delete()
+        messages.success(
+            request,
+            f'Roadmap "{roadmap_title}" has been deleted.'
+        )
+        return redirect('tracker:subject_detail', pk=subject.pk)
+    
+    context = {
+        'roadmap': roadmap,
+        'subject': subject,
+    }
+
+    return render(request, 'tracker/roadmap_confirm_delete.html', context)
+        
+
+        

@@ -1,0 +1,236 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Delete Roadmap - Confirmation{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 3rem auto;
+        background: white;
+        padding: 2.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .warning-icon {
+        font-size: 5rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        animation: shake 0.5s;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+
+    .delete-container h1 {
+        font-size: 1.75rem;
+        color: #DC2626;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #6B7280;
+        margin-bottom: 2rem;
+    }
+
+    .roadmap-preview {
+        background: #FEF2F2;
+        border: 2px solid #FEE2E2;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .roadmap-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #991B1B;
+        margin-bottom: 0.5rem;
+    }
+
+    .roadmap-overview {
+        color: #7F1D1D;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .roadmap-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        background: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        color: #6B7280;
+        font-size: 0.875rem;
+    }
+
+    .stat-label {
+        font-weight: 600;
+    }
+
+    .warning-box {
+        background: #FEF3C7;
+        border-left: 4px solid #F59E0B;
+        padding: 1.25rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .warning-box p {
+        color: #92400E;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .warning-box strong {
+        color: #78350F;
+    }
+
+    .consequences-list {
+        background: #FEF2F2;
+        padding: 1.25rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .consequences-list h3 {
+        color: #991B1B;
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .consequences-list ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .consequences-list li {
+        padding: 0.5rem 0;
+        color: #7F1D1D;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .consequences-list li::before {
+        content: "⚠️";
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn {
+        padding: 0.875rem 2rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+        transition: all 0.2s;
+        flex: 1;
+        text-align: center;
+    }
+
+    .btn-danger {
+        background: #DC2626;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #B91C1C;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: #6B7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4B5563;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-container">
+    <div class="warning-icon">⚠️</div>
+    
+    <h1>Delete Roadmap?</h1>
+    <p class="subtitle">This action cannot be undone</p>
+
+    <div class="roadmap-preview">
+        <div class="roadmap-title">{{ roadmap.title }}</div>
+        <p class="roadmap-overview">{{ roadmap.overview|truncatewords:30 }}</p>
+        
+        <div class="roadmap-stats">
+            <div class="stat-item">
+                <span class="stat-label">Total Steps:</span>
+                <span>{{ roadmap.total_steps }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Subject:</span>
+                <span>{{ subject.get_name_display }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Generated:</span>
+                <span>{{ roadmap.generated_at|date:"M d, Y" }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Goal:</span>
+                <span>{{ roadmap.term_goal.current_level }} → {{ roadmap.term_goal.target_level }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="warning-box">
+        <p>
+            <strong>Are you sure you want to delete this roadmap?</strong><br>
+            All {{ roadmap.total_steps }} steps and their checklist items will be permanently removed.
+        </p>
+    </div>
+
+    <div class="consequences-list">
+        <h3>What will be deleted:</h3>
+        <ul>
+            <li>All {{ roadmap.total_steps }} roadmap steps</li>
+            <li>All checklist items and their completion status</li>
+            <li>Any resources attached to steps</li>
+            <li>Progress tracking data for this roadmap</li>
+        </ul>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-actions">
+            <a href="{% url 'tracker:roadmap_detail' roadmap.pk %}" class="btn btn-secondary">
+                Cancel - Keep Roadmap
+            </a>
+            <button type="submit" class="btn btn-danger">
+                🗑️ Yes, Delete Roadmap
+            </button>
+        </div>
+    </form>
+
+    <p style="text-align: center; color: #9CA3AF; font-size: 0.875rem; margin-top: 1.5rem;">
+        You can always generate a new roadmap later
+    </p>
+</div>
+{% endblock %}

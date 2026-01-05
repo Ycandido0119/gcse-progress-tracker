@@ -27,4 +27,10 @@ urlpatterns = [
     path('subjects/<int:subject_pk>/sessions/add/', views.add_study_session, name='add_study_session'),
     path('sessions/<int:pk>/edit/', views.edit_study_session, name='edit_study_session'),
     path('sessions/<int:pk>/delete/', views.delete_study_session, name='delete_study_session'),
+
+    # Roadmap URLS
+    path('subjects/<int:subject_pk>/roadmap/generate/', views.generate_roadmap, name='generate_roadmap'),
+    path('roadmaps/<int:pk>/', views.roadmap_detail, name='roadmap_detail'),
+    path('roadmaps/<int:pk>/delete/', views.delete_roadmap, name='delete_roadmap'),
+    path('roadmap-steps/<int:pk>/', views.roadmap_step_detail, name='roadmap_step_detail'),
 ]
