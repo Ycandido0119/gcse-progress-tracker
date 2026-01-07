@@ -1,5 +1,8 @@
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.utils import timezone
 from django.contrib import messages
 from django.db import transaction
 from .models import Subject, Feedback, TermGoal, StudySession, Roadmap, RoadmapStep, ChecklistItem
@@ -528,4 +531,56 @@ def delete_roadmap(request, pk):
     return render(request, 'tracker/roadmap_confirm_delete.html', context)
         
 
-        
+@login_required
+@require_POST
+def toggle_checklist_item(request, pk):
+    """Toggle completion status of a checklist item via AJAX"""
+
+    # Get checklist item, ensuring user owns the roadmap
+    checklist_item = get_object_or_404(
+        ChecklistItem.objects.select_related(
+            'roadmap_step__roadmap__subject'
+        ),
+        pk=pk,
+        roadmap_step__roadmap__subject__user=request.user
+    )
+
+    # Toggle completion status
+    checklist_item.is_completed = not checklist_item.is_completed
+
+    # Update completed_at timestamp
+    if checklist_item.is_completed:
+        checklist_item.completed_at = timezone.now()
+    else:
+        checklist_item.completed_at = None
+
+    checklist_item.save()
+
+    # Calculate step progress
+    step = checklist_item.roadmap_step
+    step_items = step.checklist_items.all()
+    step_completed = step_items.filter(is_completed=True).count()
+    step_total = step_items.count()
+    step_progress = (step_completed / step_total * 100) if step_total > 0 else 0
+
+    # Calculate roadmap progress
+    roadmap = step.roadmap
+    all_items = ChecklistItem.objects.filter(
+        roadmap_step__roadmap=roadmap
+    )
+    roadmap_completed = all_items.filter(is_completed=True).count()
+    roadmap_total = all_items.count()
+    roadmap_progress = (roadmap_completed / roadmap_total * 100) if roadmap_total > 0 else 0
+
+    # Return JSON response
+    return JsonResponse({
+        'success': True,
+        'is_completed': checklist_item.is_completed,
+        'completed_at': checklist_item.completed_at.isoformat() if checklist_item.completed_at else None,
+        'step_progress': round(step_progress, 1),
+        'step_completed': step_completed,
+        'step_total': step_total,
+        'roadmap_progress': round(roadmap_progress, 1),
+        'roadmap_completed': roadmap_completed,
+        'roadmap_total': roadmap_total, 
+    })  

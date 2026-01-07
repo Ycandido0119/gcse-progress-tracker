@@ -33,4 +33,7 @@ urlpatterns = [
     path('roadmaps/<int:pk>/', views.roadmap_detail, name='roadmap_detail'),
     path('roadmaps/<int:pk>/delete/', views.delete_roadmap, name='delete_roadmap'),
     path('roadmap-steps/<int:pk>/', views.roadmap_step_detail, name='roadmap_step_detail'),
+
+    # Roadmap Progress URLs
+    path('roadmap-items/<int:pk>/toggle/', views.toggle_checklist_item, name='toggle_checklist_item'),
 ]

@@ -1,4 +1,5 @@
 {% extends 'tracker/base.html' %}
+{% load static %}
 
 {% block title %}{{ step.title }} - Step {{ step.order_number }}{% endblock %}
 
@@ -93,6 +94,12 @@
         color: #10B981;
     }
 
+    .step-progress-percentage {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #10B981;
+    }
+
     .progress-bar {
         background: #D1FAE5;
         height: 1.5rem;
@@ -101,6 +108,25 @@
     }
 
     .progress-fill {
+        background: #10B981;
+        height: 100%;
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .step-progress-bar {
+        background: #D1FAE5;
+        height: 1.5rem;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+
+    .step-progress-fill {
         background: #10B981;
         height: 100%;
         transition: width 0.5s ease;
@@ -122,6 +148,7 @@
         gap: 1rem;
         transition: all 0.2s;
         border: 2px solid transparent;
+        position: relative;
     }
 
     .checklist-item:hover {
@@ -132,8 +159,19 @@
     .checklist-item.completed {
         background: #F0FDF4;
         border-color: #10B981;
+        opacity: 0.85;
     }
 
+    /* Hide the default checkbox */
+    .checklist-item input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        cursor: pointer;
+        height: 0;
+        width: 0;
+    }
+
+    /* Custom checkbox */
     .checkbox {
         width: 1.5rem;
         height: 1.5rem;
@@ -142,12 +180,18 @@
         cursor: pointer;
         flex-shrink: 0;
         margin-top: 0.25rem;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .checkbox:hover {
+        border-color: #10B981;
+        background-color: #F0FDF4;
     }
 
     .checkbox.checked {
         background: #10B981;
         border-color: #10B981;
-        position: relative;
     }
 
     .checkbox.checked::after {
@@ -170,6 +214,13 @@
     .checklist-item.completed .checklist-text {
         color: #6B7280;
         text-decoration: line-through;
+    }
+
+    .completion-timestamp {
+        font-size: 0.875rem;
+        color: #10B981;
+        margin-top: 0.25rem;
+        font-weight: 500;
     }
 
     .resources-grid {
@@ -264,6 +315,12 @@
         font-size: 3rem;
         margin-bottom: 0.5rem;
     }
+
+    .step-progress-details {
+        color: #065F46;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
 </style>
 {% endblock %}
 
@@ -298,17 +355,17 @@
 <div class="progress-card">
     <div class="progress-header">
         <span class="progress-text">Step Progress</span>
-        <span class="progress-percentage">{{ step_completion }}%</span>
+        <span class="step-progress-percentage">{{ step_completion }}%</span>
     </div>
-    <div class="progress-bar">
-        <div class="progress-fill" style="width: {{ step_completion }}%">
+    <div class="step-progress-bar">
+        <div class="step-progress-fill" style="width: {{ step_completion }}%">
             {% if step_completion > 15 %}
             {{ step_completion }}%
             {% endif %}
         </div>
     </div>
-    <p style="color: #065F46; font-size: 0.875rem; margin-top: 0.5rem;">
-        {{ completed_items }} of {{ total_items }} items completed
+    <p class="step-progress-details">
+        <span class="step-progress-text">{{ completed_items }} of {{ total_items }} items completed</span>
     </p>
 </div>
 
@@ -324,11 +381,17 @@
     
     {% for item in step.checklist_items.all %}
     <div class="checklist-item {% if item.is_completed %}completed{% endif %}">
-        <div class="checkbox {% if item.is_completed %}checked{% endif %}"></div>
+        <input 
+            type="checkbox" 
+            {% if item.is_completed %}checked{% endif %}
+            data-item-id="{{ item.pk }}"
+            id="item-{{ item.pk }}"
+        >
+        <label for="item-{{ item.pk }}" class="checkbox {% if item.is_completed %}checked{% endif %}"></label>
         <div class="checklist-text">
             {{ item.task_description }}
             {% if item.completed_at %}
-            <div style="font-size: 0.875rem; color: #10B981; margin-top: 0.25rem;">
+            <div class="completion-timestamp">
                 ✓ Completed {{ item.completed_at|date:"M d, Y" }}
             </div>
             {% endif %}
@@ -381,4 +444,8 @@
         ← Back to Roadmap
     </a>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'tracker/js/roadmap_progress.js' %}"></script>
 {% endblock %}
