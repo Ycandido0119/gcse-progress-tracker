@@ -1,57 +1,426 @@
 {% extends 'tracker/base.html' %}
+{% load static %}
 
-{% block title %}Dashboard - GCSE Progress Tracker{% endblock %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Welcome Header -->
+    <div class="welcome-section">
+        <h1 class="welcome-title">Welcome back, {{ user.username }}! 👋</h1>
+        <p class="welcome-subtitle">Here's your study overview</p>
+    </div>
+
+    <!-- ANALYTICS SECTION (NEW for Story 8.1) -->
+    <div class="analytics-section">
+        
+        <!-- Page Title -->
+        <div class="analytics-header">
+            <h2 class="analytics-title">📊 Your Study Analytics</h2>
+            <p class="analytics-subtitle">Track your progress and study patterns</p>
+        </div>
+
+        <!-- Key Metrics Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon">🔥</div>
+                <div class="metric-value">{{ study_streak }}</div>
+                <div class="metric-label">Day Streak</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">⏰</div>
+                <div class="metric-value">{{ total_hours }}</div>
+                <div class="metric-label">Total Hours</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">✅</div>
+                <div class="metric-value">{{ completion_percentage }}%</div>
+                <div class="metric-label">Tasks Done</div>
+                <div class="metric-detail">{{ completed_tasks }}/{{ total_tasks }}</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">📚</div>
+                <div class="metric-value">{{ avg_daily_hours }}</div>
+                <div class="metric-label">Avg/Day</div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            
+            <!-- Weekly Study Time Chart -->
+            <div class="chart-container large">
+                <div class="chart-header">
+                    <h3 class="chart-title">📈 Weekly Study Time</h3>
+                    <p class="chart-subtitle">Last 7 days</p>
+                </div>
+                <div class="chart-body">
+                    <canvas 
+                        id="weeklyStudyChart" 
+                        data-chart-data="{{ weekly_chart_data|safe }}"
+                    ></canvas>
+                </div>
+            </div>
+
+            <!-- Subject Comparison & Progress -->
+            <div class="chart-row">
+                <!-- Subject Comparison Chart -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">📊 Study by Subject</h3>
+                        <p class="chart-subtitle">Total hours</p>
+                    </div>
+                    <div class="chart-body">
+                        <canvas 
+                            id="subjectComparisonChart"
+                            data-chart-data="{{ subject_chart_data|safe }}"
+                        ></canvas>
+                    </div>
+                </div>
+
+                <!-- Progress Donut Chart -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">🎯 Overall Progress</h3>
+                        <p class="chart-subtitle">Tasks completed</p>
+                    </div>
+                    <div class="chart-body">
+                        <canvas 
+                            id="progressDonutChart"
+                            data-chart-data="{{ progress_chart_data|safe }}"
+                        ></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Feed -->
+        <div class="activity-section">
+            <div class="activity-header">
+                <h3 class="activity-title">📝 Recent Activity</h3>
+            </div>
+            
+            {% if recent_activity %}
+            <div class="activity-list">
+                {% for activity in recent_activity %}
+                <div class="activity-item">
+                    <div class="activity-icon">{{ activity.icon }}</div>
+                    <div class="activity-content">
+                        <div class="activity-text">{{ activity.text }}</div>
+                        <div class="activity-date">{{ activity.date|date:"M d, Y" }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-activity">
+                <p>No recent activity. Start studying to see your progress here!</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+    <!-- END ANALYTICS SECTION -->
+
+    <!-- EXISTING SUBJECTS SECTION -->
+    <div class="subjects-section">
+        <div class="section-header">
+            <h2 class="section-title">📚 Your Subjects</h2>
+            <a href="{% url 'tracker:add_subject' %}" class="btn btn-primary">
+                + Add Subject
+            </a>
+        </div>
+
+        {% if subjects %}
+        <div class="subjects-grid">
+            {% for subject in subjects %}
+            <div class="subject-card">
+                <div class="subject-icon">
+                    {% if subject.name == 'maths' %}🔢
+                    {% elif subject.name == 'english' %}📖
+                    {% elif subject.name == 'science' %}🔬
+                    {% elif subject.name == 'history' %}📜
+                    {% elif subject.name == 'geography' %}🌍
+                    {% elif subject.name == 'computer_science' %}💻
+                    {% elif subject.name == 'business' %}💼
+                    {% elif subject.name == 'art' %}🎨
+                    {% else %}📚
+                    {% endif %}
+                </div>
+                <h3 class="subject-name">{{ subject.get_name_display }}</h3>
+                
+                <div class="subject-stats">
+                    <div class="stat">
+                        <span class="stat-label">Study Time:</span>
+                        <span class="stat-value">{{ subject.get_total_study_hours }} hours</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Progress:</span>
+                        <span class="stat-value">{{ subject.get_completion_percentage }}%</span>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ subject.get_completion_percentage }}%"></div>
+                </div>
+
+                <a href="{% url 'tracker:subject_detail' subject.pk %}" class="btn btn-secondary btn-block">
+                    View Details →
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📚</div>
+            <h3>No subjects yet</h3>
+            <p>Add your first subject to start tracking your progress!</p>
+            <a href="{% url 'tracker:add_subject' %}" class="btn btn-primary">
+                + Add Your First Subject
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    <!-- END SUBJECTS SECTION -->
+
+</div>
+{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Welcome Card */
-    .welcome-card {
-        background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-        color: white;
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
         padding: 2rem;
-        border-radius: 1rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
     }
 
-    .welcome-card h1 {
-        font-size: 1.75rem;
+    /* Welcome Section */
+    .welcome-section {
+        margin-bottom: 3rem;
+        text-align: center;
+    }
+
+    .welcome-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .welcome-subtitle {
+        font-size: 1.1rem;
+        color: #6B7280;
+    }
+
+    /* Analytics Section */
+    .analytics-section {
+        margin-bottom: 4rem;
+    }
+
+    .analytics-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .analytics-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .analytics-subtitle {
+        color: #6B7280;
+        font-size: 1.1rem;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .metric-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-label {
+        font-size: 0.875rem;
+        color: #6B7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .metric-detail {
+        font-size: 0.875rem;
+        color: #9CA3AF;
+        margin-top: 0.25rem;
+    }
+
+    /* Charts Grid */
+    .charts-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .chart-container {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-container.large {
+        width: 100%;
+    }
+
+    .chart-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .chart-header {
         margin-bottom: 1rem;
     }
 
-    .stats {
+    .chart-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .chart-subtitle {
+        font-size: 0.875rem;
+        color: #6B7280;
+    }
+
+    .chart-body {
+        position: relative;
+        height: 300px;
+    }
+
+    .chart-container.large .chart-body {
+        height: 250px;
+    }
+
+    /* Activity Section */
+    .activity-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .activity-header {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #E5E7EB;
+    }
+
+    .activity-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .activity-list {
         display: flex;
-        gap: 2rem;
-        margin-top: 1rem;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 1rem;
     }
 
-    .stat {
-        font-size: 1rem;
+    .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: #F9FAFB;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
     }
 
-    .stat strong {
-        font-size: 1.5rem;
-        display: block;
+    .activity-item:hover {
+        background: #F3F4F6;
+        transform: translateX(5px);
     }
 
-    .progress-bar {
-        background: rgba(255, 255, 255, 0.3);
-        height: 0.75rem;
-        border-radius: 9999px;
-        margin-top: 1rem;
-        overflow: hidden;
+    .activity-icon {
+        font-size: 1.75rem;
+        flex-shrink: 0;
     }
 
-    .progress-fill {
-        background: #10B981;
-        height: 100%;
-        border-radius: 9999px;
-        transition: width 0.5s ease;
+    .activity-content {
+        flex: 1;
     }
 
-    /* Subject Grid */
-    .subject-grid {
+    .activity-text {
+        color: #111827;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-date {
+        color: #6B7280;
+        font-size: 0.875rem;
+    }
+
+    .empty-activity {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6B7280;
+    }
+
+    /* Subjects Section */
+    .subjects-section {
+        margin-top: 3rem;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .subjects-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 1.5rem;
@@ -59,20 +428,15 @@
 
     .subject-card {
         background: white;
-        border-radius: 1rem;
         padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
-        border: 2px solid transparent;
-        text-decoration: none;
-        color: inherit;
-        display: block;
     }
 
     .subject-card:hover {
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
-        border-color: #3B82F6;
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     .subject-icon {
@@ -84,206 +448,147 @@
     .subject-name {
         font-size: 1.5rem;
         font-weight: 700;
-        text-align: center;
-        margin-bottom: 0.5rem;
         color: #111827;
-    }
-
-    .subject-goal {
         text-align: center;
-        color: #6B7280;
         margin-bottom: 1rem;
-        font-size: 1.125rem;
     }
 
-    .completion {
-        margin: 1rem 0;
+    .subject-stats {
+        margin-bottom: 1rem;
     }
 
-    .completion-text {
+    .stat {
         display: flex;
         justify-content: space-between;
         margin-bottom: 0.5rem;
-        font-size: 0.875rem;
         color: #6B7280;
     }
 
-    .subject-progress {
-        background: #E5E7EB;
-        height: 0.5rem;
-        border-radius: 9999px;
-        overflow: hidden;
+    .stat-label {
+        font-weight: 600;
     }
 
-    .subject-progress-fill {
+    .stat-value {
+        color: #111827;
+    }
+
+    .progress-bar {
+        background: #E5E7EB;
+        height: 0.75rem;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    .progress-fill {
+        background: linear-gradient(90deg, #10B981 0%, #059669 100%);
         height: 100%;
-        border-radius: 9999px;
         transition: width 0.5s ease;
     }
 
-    .progress-high { background: #10B981; }
-    .progress-medium { background: #F59E0B; }
-    .progress-low { background: #EF4444; }
+    /* Buttons */
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+        transition: all 0.2s;
+        text-align: center;
+    }
 
-    .view-button {
-        display: block;
-        width: 100%;
+    .btn-primary {
         background: #3B82F6;
         color: white;
-        padding: 0.75rem;
-        border-radius: 0.5rem;
-        text-align: center;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        transition: background 0.2s;
-        margin-top: 1rem;
-        text-decoration: none;
     }
 
-    .view-button:hover {
+    .btn-primary:hover {
         background: #2563EB;
+        transform: translateY(-1px);
     }
 
-    .add-subject {
-        background: white;
-        border: 2px dashed #D1D5DB;
-        border-radius: 1rem;
-        padding: 3rem;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s;
-        color: #6B7280;
-        text-decoration: none;
+    .btn-secondary {
+        background: #6B7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4B5563;
+    }
+
+    .btn-block {
         display: block;
+        width: 100%;
     }
 
-    .add-subject:hover {
-        border-color: #3B82F6;
-        color: #3B82F6;
-    }
-
-    .add-subject-icon {
-        font-size: 3rem;
-        margin-bottom: 0.5rem;
-    }
-
+    /* Empty State */
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
-        color: #6B7280;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .empty-state-icon {
+    .empty-icon {
         font-size: 4rem;
         margin-bottom: 1rem;
     }
 
+    .empty-state h3 {
+        font-size: 1.5rem;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: #6B7280;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Responsive Design */
     @media (max-width: 768px) {
-        .subject-grid {
+        .dashboard-container {
+            padding: 1rem;
+        }
+
+        .welcome-title {
+            font-size: 1.75rem;
+        }
+
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .chart-row {
             grid-template-columns: 1fr;
         }
-        .stats {
+
+        .subjects-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .section-header {
             flex-direction: column;
+            align-items: flex-start;
             gap: 1rem;
+        }
+
+        .chart-body {
+            height: 250px;
         }
     }
 </style>
 {% endblock %}
 
-{% block content %}
-<!-- Welcome Card -->
-<div class="welcome-card">
-    <h1>Welcome back, {{ user.profile.full_name }}! 👋</h1>
-    <div class="stats">
-        <div class="stat">
-            <strong>{{ total_hours|floatformat:1 }} hours</strong>
-            studied in total
-        </div>
-        <div class="stat">
-            <strong>{{ avg_completion|floatformat:0 }}%</strong>
-            overall progress
-        </div>
-        <div class="stat">
-            <strong>{{ total_subjects }}</strong>
-            subject{{ total_subjects|pluralize }}
-        </div>
-    </div>
-    <div class="progress-bar">
-        <div class="progress-fill" style="width: {{ avg_completion }}%"></div>
-    </div>
-</div>
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-{% if subjects %}
-<!-- Subject Grid -->
-<div class="subject-grid">
-    {% for subject in subjects %}
-    <a href="{% url 'tracker:subject_detail' subject.pk %}" class="subject-card">
-        <div class="subject-icon">
-            {% if subject.name == 'maths' %}📊
-            {% elif subject.name == 'english' %}📚
-            {% elif subject.name == 'science' %}🔬
-            {% elif subject.name == 'mandarin' %}🇨🇳
-            {% endif %}
-        </div>
-        <div class="subject-name">{{ subject.get_name_display|upper }}</div>
-        {% if subject.get_latest_term_goal %}
-        <div class="subject-goal">
-            {{ subject.get_latest_term_goal.current_level }} → {{ subject.get_latest_term_goal.target_level }}
-        </div>
-        {% else %}
-        <div class="subject-goal">No goal set yet</div>
-        {% endif %}
-        <div class="completion">
-            <div class="completion-text">
-                <span>{{ subject.get_completion_percentage }}% complete</span>
-                <span>{{ subject.get_total_study_hours|floatformat:1 }}h total</span>
-            </div>
-            <div class="subject-progress">
-                {% with completion=subject.get_completion_percentage %}
-                <div class="subject-progress-fill 
-                    {% if completion >= 50 %}progress-high
-                    {% elif completion >= 25 %}progress-medium
-                    {% else %}progress-low
-                    {% endif %}"
-                    style="width: {{ completion }}%">
-                </div>
-                {% endwith %}
-            </div>
-        </div>
-        <span class="view-button">View Details →</span>
-    </a>
-    {% endfor %}
-
-    <!-- Add Subject Card -->
-    <a href="{% url 'tracker:add_subject' %}" class="add-subject">
-        <div class="add-subject-icon">➕</div>
-        <div><strong>Add New Subject</strong></div>
-    </a>
-</div>
-{% else %}
-<!-- Empty State -->
-<div class="empty-state">
-    <div class="empty-state-icon">📚</div>
-    <h2>No subjects yet!</h2>
-    <p>Get started by adding your first subject.</p>
-    <a href="{% url 'tracker:add_subject' %}" class="btn btn-primary" style="margin-top: 1rem;">
-        ➕ Add Your First Subject
-    </a>
-</div>
-{% endif %}
-
-<script>
-    // Animate progress bars on load
-    window.addEventListener('load', () => {
-        const fills = document.querySelectorAll('.progress-fill, .subject-progress-fill');
-        fills.forEach(fill => {
-            const width = fill.style.width;
-            fill.style.width = '0';
-            setTimeout(() => {
-                fill.style.width = width;
-            }, 100);
-        });
-    });
-</script>
+<!-- Dashboard Charts JavaScript -->
+<script src="{% static 'tracker/js/dashboard_charts.js' %}"></script>
 {% endblock %}

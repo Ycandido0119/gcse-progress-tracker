@@ -5,40 +5,219 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.contrib import messages
 from django.db import transaction
-from .models import Subject, Feedback, TermGoal, StudySession, Roadmap, RoadmapStep, ChecklistItem
+from .models import (
+    Subject, Feedback, TermGoal, StudySession, 
+    Roadmap, RoadmapStep, ChecklistItem
+)
 from .ai_service import get_ai_service, RoadmapGenerationError
 from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm
-
+from django.db.models import Sum, Count, Q
+import json
+from datetime import date, timedelta
 
 @login_required
 def dashboard(request):
-    """
-    Main dashboard showing all subjects for the logged-in user
-    """
-    subjects = list(Subject.objects.filter(user=request.user).order_by('name'))
-    
-    # Calculate overall statistics
-    total_subjects = len(subjects)
-    
-    # Calculate totals
-    total_hours = 0
-    total_completion = 0
-    
+    """Dashboard with analytics and visualisations"""
+    user = request.user
+    subjects = Subject.objects.filter(user=user).prefetch_related(
+        'feedbacks', 'term_goals', 'study_sessions', 'roadmaps'
+    )
+
+    # Total study hours
+    total_hours = StudySession.objects.filter(
+        subject__user=user
+    ).aggregate(
+        total=Sum('hours_spent')
+    )['total'] or 0
+
+    # Study streak (consecutive days with study sessions)
+    study_streak = calculate_study_streak(user)
+
+    # Total completed tasks across all roadmaps
+    total_tasks = ChecklistItem.objects.filter(
+        roadmap_step__roadmap__subject__user=user
+    ).count()
+
+    completed_tasks = ChecklistItem.objects.filter(
+        roadmap_step__roadmap__subject__user=user,
+        is_completed=True
+    ).count()
+
+    completion_percentage = (
+        round((completed_tasks / total_tasks) * 100, 1)
+        if total_tasks > 0 else 0
+    )
+
+    # Average daily hours (last 30 days)
+    thirty_days_ago = timezone.now() - timezone.timedelta(days=30)
+    hours_last_30 = StudySession.objects.filter(
+        subject__user=user,
+        session_date__gte=thirty_days_ago
+    ).aggregate(
+        total=Sum('hours_spent')
+    )['total'] or 0
+
+    avg_daily_hours = round(hours_last_30 / 30, 1)
+
+    weekly_data = get_weekly_study_data(user)
+
+    subject_data = []
+    subject_labels = []
+
     for subject in subjects:
-        total_hours += subject.get_total_study_hours()
-        total_completion += subject.get_completion_percentage()
-    
-    # Calculate average completion
-    avg_completion = total_completion / total_subjects if total_subjects > 0 else 0
-    
+        hours = subject.study_sessions.aggregate(
+            total=Sum('hours_spent')
+        )['total'] or 0
+
+        if hours > 0:
+            subject_labels.append(subject.get_name_display())
+            subject_data.append(float(hours))
+
+    progress_data = {
+        'completed': completed_tasks,
+        'remaining': total_tasks - completed_tasks
+    }
+
+    recent_activity = get_recent_activity(user, limit=5)
+
+    most_studied = None
+    if subject_data:
+        max_hours_index = subject_data.index(max(subject_data))
+        most_studied = subject_labels[max_hours_index]
+
     context = {
         'subjects': subjects,
-        'total_subjects': total_subjects,
-        'total_hours': total_hours,
-        'avg_completion': round(avg_completion, 1),
+
+        # Key metrics
+        'total_hours': round(total_hours, 1),
+        'study_streak': study_streak,
+        'completed_tasks': completed_tasks,
+        'total_tasks': total_tasks,
+        'completion_percentage': completion_percentage,
+        'avg_daily_hours': avg_daily_hours,
+        'most_studied': most_studied,
+
+        # Chart data (as JSON for Javascript)
+        'weekly_chart_data': json.dumps({
+            'labels': weekly_data['labels'],
+            'data': weekly_data['data'],
+        }),
+        'subject_chart_data': json.dumps({
+            'labels': subject_labels,
+            'data': subject_data,
+        }),
+        'progress_chart_data': json.dumps(progress_data),
+
+        # Recent activity
+        'recent_activity': recent_activity,
     }
-    
+
     return render(request, 'tracker/dashboard.html', context)
+
+
+def calculate_study_streak(user):
+    """Calculate consecutive days with study sessions"""
+    today = date.today()
+    streak = 0
+    current_date = today
+
+    while True:
+        # Check if there are study sessions on current_date
+        has_session = StudySession.objects.filter(
+            subject__user=user,
+            session_date=current_date
+        ).exists()
+
+        if has_session:
+            streak += 1
+            current_date -= timedelta(days=1)
+        else:
+            # Streak broken
+            break
+
+        # Safety limit
+        if streak > 365:
+            break
+
+    return streak
+
+def get_weekly_study_data(user):
+    """Get study hours for the last 7 days"""
+    today = date.today()
+    labels = []
+    data = []
+
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        labels.append(day.strftime('%a'))
+
+        hours = StudySession.objects.filter(
+            subject__user=user,
+            session_date=day
+        ).aggregate(
+            total=Sum('hours_spent')
+        )['total'] or 0
+
+        data.append(float(hours))
+
+    return {'labels': labels, 'data': data}
+
+
+def get_recent_activity(user, limit=5):
+    """Get recent study sessions, feedback, and completed tasks"""
+    activities = []
+
+    # Recent study sessions
+    recent_sessions = StudySession.objects.filter(
+        subject__user=user
+    ).select_related('subject').order_by('-session_date')[:limit]
+
+    for session in recent_sessions:
+        activities.append({
+            'type': 'study',
+            'icon': '📚',
+            'text': f"Studied {session.subject.get_name_display()} for {session.hours_spent} hours",
+            'date': session.session_date,
+            'timestamp': timezone.make_aware(
+                timezone.datetime.combine(session.session_date, timezone.datetime.min.time())
+            )
+        })
+
+    # Recent feedback (MOVED OUTSIDE THE LOOP!)
+    recent_feedbacks = Feedback.objects.filter(
+        subject__user=user
+    ).select_related('subject').order_by('-created_at')[:limit]
+
+    for feedback in recent_feedbacks:
+        activities.append({
+            'type': 'feedback',
+            'icon': '💭',
+            'text': f"Added feedback for {feedback.subject.get_name_display()}",
+            'date': feedback.feedback_date,
+            'timestamp': feedback.created_at
+        })
+    
+    # Recently completed tasks (MOVED OUTSIDE THE LOOP!)
+    recent_completions = ChecklistItem.objects.filter(
+        roadmap_step__roadmap__subject__user=user,
+        is_completed=True,
+        completed_at__isnull=False
+    ).select_related(
+        'roadmap_step__roadmap__subject'
+    ).order_by('-completed_at')[:limit]
+
+    for item in recent_completions:
+        activities.append({
+            'type': 'completion',
+            'icon': '✅',
+            'text': f"Completed: {item.task_description[:50]}...",
+            'date': item.completed_at.date(),
+            'timestamp': item.completed_at
+        })
+
+    # Sort by timestamp and return most recent (MOVED OUTSIDE!)
+    activities.sort(key=lambda x: x['timestamp'], reverse=True)
+    return activities[:limit]
 
 @login_required
 def add_subject(request):
