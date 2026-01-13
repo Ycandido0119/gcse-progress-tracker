@@ -195,6 +195,62 @@
         margin-top: 1rem;
     }
 
+    /* Roadmap Styles */
+    .roadmap-card {
+        background: #F9FAFB;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #10B981;
+    }
+
+    .roadmap-card.inactive {
+        opacity: 0.6;
+        border-left-color: #9CA3AF;
+    }
+
+    .roadmap-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .roadmap-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .badge-active {
+        background: #10B981;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .roadmap-meta {
+        font-size: 0.875rem;
+        color: #6B7280;
+    }
+
+    .roadmap-overview {
+        color: #374151;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .roadmap-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
     /* Feedback Styles */
     .feedback-card {
         background: #F9FAFB;
@@ -285,8 +341,6 @@
 
 <div class="subject-header">
     <h1 class="subject-title">{{ subject.get_name_display }}</h1>
-<div class="subject-header">
-    <h1 class="subject-title">{{ subject.get_name_display }}</h1>
     {% if subject.description %}
     <p>{{ subject.description }}</p>
     {% endif %}
@@ -369,6 +423,69 @@
             <div class="empty-icon">🎯</div>
             <h3>No Term Goals Yet</h3>
             <p>Set a goal to track your progress toward your target level!</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- AI Roadmaps Section -->
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">🗺️ AI Study Roadmaps</h2>
+        {% if term_goals %}
+        <a href="{% url 'tracker:generate_roadmap' subject.pk %}" class="btn btn-primary">
+            ✨ Generate AI Roadmap
+        </a>
+        {% endif %}
+    </div>
+
+    {% if subject.roadmaps.all %}
+        {% for roadmap in subject.roadmaps.all %}
+        <div class="{% if roadmap.is_active %}roadmap-card active{% else %}roadmap-card inactive{% endif %}">
+            <div class="roadmap-header">
+                <div>
+                    <div class="roadmap-title">
+                        {{ roadmap.title }}
+                        {% if roadmap.is_active %}
+                        <span class="badge-active">Active</span>
+                        {% endif %}
+                    </div>
+                    <div class="roadmap-meta">
+                        📅 Generated {{ roadmap.generated_at|date:"M d, Y" }} | 
+                        📋 {{ roadmap.total_steps }} steps
+                    </div>
+                </div>
+            </div>
+
+            <div class="roadmap-overview">
+                {{ roadmap.overview }}
+            </div>
+
+            <div class="roadmap-actions">
+                <a href="{% url 'tracker:roadmap_detail' roadmap.pk %}" class="btn btn-primary">
+                    View Roadmap →
+                </a>
+                <a href="{% url 'tracker:delete_roadmap' roadmap.pk %}" class="btn btn-danger">
+                    🗑️ Delete
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">🗺️</div>
+            {% if term_goals %}
+            <h3>No Roadmaps Yet</h3>
+            <p>Generate an AI-powered study roadmap based on your goals and feedback!</p>
+            <a href="{% url 'tracker:generate_roadmap' subject.pk %}" class="btn btn-primary">
+                ✨ Generate Your First Roadmap
+            </a>
+            {% else %}
+            <h3>Set a Term Goal First</h3>
+            <p>You need to set a term goal before generating a roadmap.</p>
+            <a href="{% url 'tracker:add_term_goal' subject.pk %}" class="btn btn-primary">
+                🎯 Set Term Goal
+            </a>
+            {% endif %}
         </div>
     {% endif %}
 </div>

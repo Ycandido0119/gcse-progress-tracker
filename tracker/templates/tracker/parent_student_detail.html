@@ -1,0 +1,635 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ student.username|title }} - Student Progress{% endblock %}
+
+{% block content %}
+<div class="parent-student-detail-container">
+    
+    <!-- Back Button -->
+    <div class="back-nav">
+        <a href="{% url 'tracker:parent_dashboard' %}" class="btn btn-secondary">
+            ← Back to Parent Dashboard
+        </a>
+    </div>
+
+    <!-- Student Header -->
+    <div class="student-detail-header">
+        <div class="student-avatar">👤</div>
+        <div class="student-detail-info">
+            <h1 class="student-detail-name">{{ student.username|title }}</h1>
+            <p class="student-detail-subtitle">{{ subjects.count }} subject{% if subjects.count != 1 %}s{% endif %} • {{ total_hours }}h total study time</p>
+        </div>
+    </div>
+
+    <!-- Key Metrics Grid -->
+    <div class="metrics-section">
+        <h2 class="section-title">📊 Performance Overview</h2>
+        <div class="metrics-grid-large">
+            <div class="metric-card-large">
+                <div class="metric-icon-large">🔥</div>
+                <div class="metric-value-large">{{ study_streak }}</div>
+                <div class="metric-label-large">Day Streak</div>
+                <div class="metric-description">Consecutive days studying</div>
+            </div>
+
+            <div class="metric-card-large">
+                <div class="metric-icon-large">⏰</div>
+                <div class="metric-value-large">{{ total_hours }}h</div>
+                <div class="metric-label-large">Total Hours</div>
+                <div class="metric-description">All-time study time</div>
+            </div>
+
+            <div class="metric-card-large">
+                <div class="metric-icon-large">✅</div>
+                <div class="metric-value-large">{{ completion_percentage }}%</div>
+                <div class="metric-label-large">Tasks Completed</div>
+                <div class="metric-description">{{ completed_tasks }} of {{ total_tasks }} tasks done</div>
+            </div>
+
+            <div class="metric-card-large">
+                <div class="metric-icon-large">📈</div>
+                <div class="metric-value-large">{{ subjects.count }}</div>
+                <div class="metric-label-large">Active Subjects</div>
+                <div class="metric-description">Currently studying</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subjects Detail -->
+    <div class="subjects-detail-section">
+        <h2 class="section-title">📚 Subject Progress</h2>
+        
+        {% if subjects %}
+        <div class="subjects-detail-grid">
+            {% for subject in subjects %}
+            <div class="subject-detail-card">
+                <div class="subject-detail-header">
+                    <div class="subject-icon-large">
+                        {% if subject.name == 'maths' %}🔢
+                        {% elif subject.name == 'english' %}📖
+                        {% elif subject.name == 'science' %}🔬
+                        {% elif subject.name == 'history' %}📜
+                        {% elif subject.name == 'geography' %}🌍
+                        {% elif subject.name == 'computer_science' %}💻
+                        {% elif subject.name == 'business' %}💼
+                        {% elif subject.name == 'art' %}🎨
+                        {% else %}📚
+                        {% endif %}
+                    </div>
+                    <div class="subject-detail-info">
+                        <h3 class="subject-detail-name">{{ subject.get_name_display }}</h3>
+                        <p class="subject-detail-desc">{{ subject.description|default:"No description" }}</p>
+                    </div>
+                </div>
+
+                <div class="subject-stats-grid">
+                    <div class="subject-stat">
+                        <div class="subject-stat-label">Study Time</div>
+                        <div class="subject-stat-value">{{ subject.get_total_study_hours }}h</div>
+                    </div>
+                    <div class="subject-stat">
+                        <div class="subject-stat-label">Progress</div>
+                        <div class="subject-stat-value">{{ subject.get_completion_percentage }}%</div>
+                    </div>
+                    <div class="subject-stat">
+                        <div class="subject-stat-label">Goals</div>
+                        <div class="subject-stat-value">{{ subject.term_goals.count }}</div>
+                    </div>
+                    <div class="subject-stat">
+                        <div class="subject-stat-label">Feedback</div>
+                        <div class="subject-stat-value">{{ subject.feedbacks.count }}</div>
+                    </div>
+                </div>
+
+                <div class="progress-bar-large">
+                    <div class="progress-fill" style="width: {{ subject.get_completion_percentage }}%"></div>
+                </div>
+
+                <!-- Term Goals -->
+                {% if subject.term_goals.all %}
+                <div class="subject-goals">
+                    <div class="subject-goals-title">🎯 Current Goals:</div>
+                    {% for goal in subject.term_goals.all %}
+                    <div class="goal-badge">
+                        {{ goal.current_level }} → {{ goal.target_level }} ({{ goal.get_term_display }})
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📚</div>
+            <p>No subjects yet</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Active Roadmaps -->
+    <div class="roadmaps-detail-section">
+        <h2 class="section-title">🗺️ Active Study Roadmaps</h2>
+        
+        {% if active_roadmaps %}
+        <div class="roadmaps-detail-list">
+            {% for roadmap in active_roadmaps %}
+            <div class="roadmap-detail-card">
+                <div class="roadmap-detail-header">
+                    <div class="roadmap-detail-title">
+                        <span class="roadmap-subject-badge">{{ roadmap.subject.get_name_display }}</span>
+                        {{ roadmap.title }}
+                    </div>
+                    <div class="roadmap-detail-meta">
+                        Generated {{ roadmap.generated_at|date:"M d, Y" }}
+                    </div>
+                </div>
+
+                <div class="roadmap-detail-overview">
+                    {{ roadmap.overview|truncatewords:30 }}
+                </div>
+
+                <div class="roadmap-stats-grid">
+                    <div class="roadmap-stat">
+                        <div class="roadmap-stat-label">Steps</div>
+                        <div class="roadmap-stat-value">{{ roadmap.total_steps }}</div>
+                    </div>
+                    <div class="roadmap-stat">
+                        <div class="roadmap-stat-label">Action Items</div>
+                        <div class="roadmap-stat-value">{{ roadmap.get_total_items }}</div>
+                    </div>
+                    <div class="roadmap-stat">
+                        <div class="roadmap-stat-label">Completed</div>
+                        <div class="roadmap-stat-value">{{ roadmap.get_completed_items }}</div>
+                    </div>
+                    <div class="roadmap-stat">
+                        <div class="roadmap-stat-label">Progress</div>
+                        <div class="roadmap-stat-value">{{ roadmap.calculate_overall_progress }}%</div>
+                    </div>
+                </div>
+
+                <div class="progress-bar-large">
+                    <div class="progress-fill" style="width: {{ roadmap.calculate_overall_progress }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">🗺️</div>
+            <p>No active roadmaps</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Activity Feed -->
+    <div class="activity-detail-section">
+        <h2 class="section-title">📝 Recent Activity</h2>
+        
+        {% if recent_activity %}
+        <div class="activity-timeline">
+            {% for activity in recent_activity %}
+            <div class="activity-timeline-item">
+                <div class="activity-timeline-marker">{{ activity.icon }}</div>
+                <div class="activity-timeline-content">
+                    <div class="activity-timeline-text">{{ activity.text }}</div>
+                    <div class="activity-timeline-date">{{ activity.date|date:"F d, Y" }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📝</div>
+            <p>No recent activity</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .parent-student-detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    /* Back Navigation */
+    .back-nav {
+        margin-bottom: 2rem;
+    }
+
+    /* Student Header */
+    .student-detail-header {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .student-avatar {
+        font-size: 5rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 1rem;
+        border-radius: 50%;
+        width: 120px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .student-detail-name {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .student-detail-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    /* Section Title */
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 1.5rem;
+    }
+
+    .metrics-section,
+    .subjects-detail-section,
+    .roadmaps-detail-section,
+    .activity-detail-section {
+        margin-bottom: 3rem;
+    }
+
+    /* Large Metrics Grid */
+    .metrics-grid-large {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .metric-card-large {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        border: 2px solid #E5E7EB;
+    }
+
+    .metric-icon-large {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .metric-value-large {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label-large {
+        font-size: 0.9rem;
+        color: #6B7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-description {
+        font-size: 0.85rem;
+        color: #9CA3AF;
+    }
+
+    /* Subject Detail Cards */
+    .subjects-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .subject-detail-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 2px solid #E5E7EB;
+    }
+
+    .subject-detail-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .subject-icon-large {
+        font-size: 2.5rem;
+    }
+
+    .subject-detail-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .subject-detail-desc {
+        font-size: 0.875rem;
+        color: #6B7280;
+    }
+
+    .subject-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .subject-stat {
+        text-align: center;
+        padding: 0.75rem;
+        background: #F9FAFB;
+        border-radius: 0.5rem;
+    }
+
+    .subject-stat-label {
+        font-size: 0.75rem;
+        color: #6B7280;
+        margin-bottom: 0.25rem;
+    }
+
+    .subject-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .progress-bar-large {
+        background: #E5E7EB;
+        height: 0.75rem;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    .progress-fill {
+        background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+
+    .subject-goals {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #E5E7EB;
+    }
+
+    .subject-goals-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6B7280;
+        margin-bottom: 0.5rem;
+    }
+
+    .goal-badge {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        background: #DBEAFE;
+        color: #1E40AF;
+        border-radius: 0.375rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Roadmap Detail Cards */
+    .roadmaps-detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .roadmap-detail-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #10B981;
+    }
+
+    .roadmap-detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .roadmap-detail-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .roadmap-subject-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #10B981;
+        color: white;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        margin-right: 0.5rem;
+    }
+
+    .roadmap-detail-meta {
+        font-size: 0.875rem;
+        color: #6B7280;
+    }
+
+    .roadmap-detail-overview {
+        color: #374151;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .roadmap-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .roadmap-stat {
+        text-align: center;
+        padding: 0.75rem;
+        background: #F9FAFB;
+        border-radius: 0.5rem;
+    }
+
+    .roadmap-stat-label {
+        font-size: 0.75rem;
+        color: #6B7280;
+        margin-bottom: 0.25rem;
+    }
+
+    .roadmap-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    /* Activity Timeline */
+    .activity-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #E5E7EB;
+    }
+
+    .activity-timeline-item {
+        position: relative;
+        padding-bottom: 2rem;
+        padding-left: 2rem;
+    }
+
+    .activity-timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 2rem;
+        height: 2rem;
+        background: white;
+        border: 2px solid #10B981;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .activity-timeline-content {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #E5E7EB;
+    }
+
+    .activity-timeline-text {
+        color: #111827;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .activity-timeline-date {
+        color: #6B7280;
+        font-size: 0.875rem;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        color: #9CA3AF;
+        font-size: 1.1rem;
+    }
+
+    /* Button */
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary {
+        background: #6B7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4B5563;
+        transform: translateY(-1px);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .parent-student-detail-container {
+            padding: 1rem;
+        }
+
+        .student-detail-header {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .student-avatar {
+            width: 100px;
+            height: 100px;
+            font-size: 4rem;
+        }
+
+        .student-detail-name {
+            font-size: 2rem;
+        }
+
+        .metrics-grid-large {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .subjects-detail-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .roadmap-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .activity-timeline {
+            padding-left: 1rem;
+        }
+
+        .activity-timeline-item {
+            padding-left: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}

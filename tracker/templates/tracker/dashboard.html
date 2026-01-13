@@ -60,7 +60,7 @@
                 <div class="chart-body">
                     <canvas 
                         id="weeklyStudyChart" 
-                        data-chart-data="{{ weekly_chart_data|safe }}"
+                        data-chart-data='{{ weekly_chart_data|safe }}'
                     ></canvas>
                 </div>
             </div>
@@ -76,7 +76,7 @@
                     <div class="chart-body">
                         <canvas 
                             id="subjectComparisonChart"
-                            data-chart-data="{{ subject_chart_data|safe }}"
+                            data-chart-data='{{ subject_chart_data|safe }}'
                         ></canvas>
                     </div>
                 </div>
@@ -90,7 +90,7 @@
                     <div class="chart-body">
                         <canvas 
                             id="progressDonutChart"
-                            data-chart-data="{{ progress_chart_data|safe }}"
+                            data-chart-data='{{ progress_chart_data|safe }}'
                         ></canvas>
                     </div>
                 </div>

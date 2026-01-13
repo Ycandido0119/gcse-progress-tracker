@@ -36,4 +36,8 @@ urlpatterns = [
 
     # Roadmap Progress URLs
     path('roadmap-items/<int:pk>/toggle/', views.toggle_checklist_item, name='toggle_checklist_item'),
+
+    # Parent Dashboard URLs
+    path('parent/dashboard/', views.parent_dashboard, name='parent_dashboard'),
+    path('parent/student/<int:student_id>/', views.parent_student_detail, name='parent_student_detail'),
 ]

@@ -305,19 +305,15 @@ class DashboardAnalyticsTests(TestCase):
         
         # Verify feedback was created
         self.assertIsNotNone(feedback.created_at)
-        print(f"\nFeedback created_at: {feedback.created_at}")
         
         # Verify we can query it
         feedback_count = Feedback.objects.filter(subject__user=self.user).count()
-        print(f"Feedback count for user: {feedback_count}")
         
         response = self.client.get(reverse('tracker:dashboard'))
         
         activities = response.context['recent_activity']
-        print(f"Total activities: {len(activities)}")
         
         feedback_activities = [a for a in activities if a['type'] == 'feedback']
-        print(f"Feedback activities: {len(feedback_activities)}")
         
         self.assertEqual(len(feedback_activities), 1)
     

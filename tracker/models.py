@@ -6,7 +6,7 @@ from django.utils import timezone
 
 
 class UserProfile(models.Model):
-    """Extended user profile to students and parents."""
+    """Extended user profile for students and parents."""
     ROLE_CHOICES = [
         ('student', 'Student'),
         ('parent', 'Parent'),
@@ -15,17 +15,22 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     full_name = models.CharField(max_length=200)
-    year_group = models.IntegerField(null=True, blank=True) # Only for students
-    linked_student = models.ForeignKey(
+    year_group = models.IntegerField(null=True, blank=True)  # Only for students
+    
+    # For parents: link to multiple students
+    linked_students = models.ManyToManyField(
         User,
-        on_delete=models.CASCADE,
-        related_name='parent_profile',
-        null=True,
+        related_name='parent_profiles',  # Changed from ForeignKey to ManyToMany
         blank=True,
-        help_text="For parents, link to the student they monitor."
-
+        help_text="For parents, link to the students they monitor."
     )
+    
     email_notifications = models.BooleanField(default=True)
+    phone_number = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Parent's contact phone number"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -33,6 +38,60 @@ class UserProfile(models.Model):
     
     class Meta:
         ordering = ['full_name']
+    
+    def get_children(self):
+        """For parent users, get all linked students."""
+        if self.role == 'parent':
+            return self.linked_students.all()
+        return User.objects.none()
+    
+    def get_children_progress(self):
+        """Get aggregated progress data for all children."""
+        from django.db.models import Sum
+        from .models import Subject, StudySession, ChecklistItem
+        
+        children_data = []
+        for child in self.get_children():
+            # Get child's subjects
+            subjects = Subject.objects.filter(user=child).prefetch_related(
+                'term_goals', 'study_sessions', 'roadmaps'
+            )
+            
+            # Calculate total hours
+            total_hours = StudySession.objects.filter(
+                subject__user=child
+            ).aggregate(total=Sum('hours_spent'))['total'] or 0
+            
+            # Calculate completion percentage
+            total_tasks = ChecklistItem.objects.filter(
+                roadmap_step__roadmap__subject__user=child
+            ).count()
+            
+            completed_tasks = ChecklistItem.objects.filter(
+                roadmap_step__roadmap__subject__user=child,
+                is_completed=True
+            ).count()
+            
+            completion_percentage = (
+                round((completed_tasks / total_tasks) * 100, 1)
+                if total_tasks > 0 else 0
+            )
+            
+            # Get study streak
+            from tracker.views import calculate_study_streak
+            streak = calculate_study_streak(child)
+            
+            children_data.append({
+                'student': child,
+                'subjects': subjects,
+                'total_hours': round(total_hours, 1),
+                'completion_percentage': completion_percentage,
+                'completed_tasks': completed_tasks,
+                'total_tasks': total_tasks,
+                'study_streak': streak,
+            })
+        
+        return children_data
 
 
 class Subject(models.Model):

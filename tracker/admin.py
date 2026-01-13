@@ -8,10 +8,28 @@ from .models import (
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['full_name', 'role', 'user', 'year_group', 'email_notifications', 'created_at']
-    list_filter = ['role', 'email_notifications']
+    list_display = ['full_name', 'role', 'user', 'year_group', 'created_at']
+    list_filter = ['role', 'year_group', 'email_notifications']
     search_fields = ['full_name', 'user__username']
-    raw_id_fields = ['user', 'linked_student']
+    raw_id_fields = ['user']  # Only for ForeignKey/OneToOne fields
+    filter_horizontal = ['linked_students']  # For ManyToManyField
+    
+    fieldsets = (
+        ('User Information', {
+            'fields': ('user', 'role', 'full_name')
+        }),
+        ('Student Information', {
+            'fields': ('year_group',),
+            'classes': ('collapse',),
+        }),
+        ('Parent Information', {
+            'fields': ('linked_students', 'phone_number'),
+            'classes': ('collapse',),
+        }),
+        ('Settings', {
+            'fields': ('email_notifications',),
+        }),
+    )
 
 
 @admin.register(Subject)

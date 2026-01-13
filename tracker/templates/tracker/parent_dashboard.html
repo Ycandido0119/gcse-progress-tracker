@@ -1,0 +1,448 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Parent Dashboard{% endblock %}
+
+{% block content %}
+<div class="parent-dashboard-container">
+    
+    <!-- Welcome Header -->
+    <div class="welcome-section">
+        <h1 class="welcome-title">Parent Dashboard 👨‍👩‍👧‍👦</h1>
+        <p class="welcome-subtitle">Monitor your {{ total_children }} {% if total_children == 1 %}child's{% else %}children's{% endif %} study progress</p>
+    </div>
+
+    <!-- Children Cards -->
+    {% for child_data in children_data %}
+    <div class="student-card">
+        
+        <!-- Student Header -->
+        <div class="student-header">
+            <div class="student-info">
+                <h2 class="student-name">📚 {{ child_data.student.username|title }}</h2>
+                <p class="student-subtitle">{{ child_data.subjects.count }} subject{% if child_data.subjects.count != 1 %}s{% endif %}</p>
+            </div>
+            <a href="{% url 'tracker:parent_student_detail' child_data.student.id %}" class="btn btn-primary">
+                View Details →
+            </a>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon">🔥</div>
+                <div class="metric-value">{{ child_data.study_streak }}</div>
+                <div class="metric-label">Day Streak</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">⏰</div>
+                <div class="metric-value">{{ child_data.total_hours }}</div>
+                <div class="metric-label">Total Hours</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">✅</div>
+                <div class="metric-value">{{ child_data.completion_percentage }}%</div>
+                <div class="metric-label">Tasks Done</div>
+                <div class="metric-detail">{{ child_data.completed_tasks }}/{{ child_data.total_tasks }}</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">📚</div>
+                <div class="metric-value">{{ child_data.avg_daily_hours }}</div>
+                <div class="metric-label">Avg/Day</div>
+            </div>
+        </div>
+
+        <!-- Subjects Overview -->
+        <div class="subjects-section">
+            <h3 class="section-title">📖 Subjects</h3>
+            
+            {% if child_data.subjects %}
+            <div class="subjects-grid-compact">
+                {% for subject in child_data.subjects %}
+                <div class="subject-compact-card">
+                    <div class="subject-compact-header">
+                        <div class="subject-icon-sm">
+                            {% if subject.name == 'maths' %}🔢
+                            {% elif subject.name == 'english' %}📖
+                            {% elif subject.name == 'science' %}🔬
+                            {% elif subject.name == 'history' %}📜
+                            {% elif subject.name == 'geography' %}🌍
+                            {% elif subject.name == 'computer_science' %}💻
+                            {% elif subject.name == 'business' %}💼
+                            {% elif subject.name == 'art' %}🎨
+                            {% else %}📚
+                            {% endif %}
+                        </div>
+                        <div class="subject-compact-info">
+                            <div class="subject-compact-name">{{ subject.get_name_display }}</div>
+                            <div class="subject-compact-stats">
+                                {{ subject.get_total_study_hours }}h studied
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-sm">
+                        <div class="progress-fill" style="width: {{ subject.get_completion_percentage }}%"></div>
+                    </div>
+                    <div class="subject-compact-progress">{{ subject.get_completion_percentage }}% complete</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-message">No subjects yet</p>
+            {% endif %}
+        </div>
+
+        <!-- Active Roadmaps -->
+        <div class="roadmaps-section">
+            <h3 class="section-title">🗺️ Active Roadmaps</h3>
+            
+            {% if child_data.active_roadmaps %}
+            <div class="roadmaps-list">
+                {% for roadmap in child_data.active_roadmaps %}
+                <div class="roadmap-compact-card">
+                    <div class="roadmap-compact-header">
+                        <div class="roadmap-compact-title">
+                            {{ roadmap.subject.get_name_display }} - {{ roadmap.title }}
+                        </div>
+                        <div class="roadmap-compact-meta">
+                            {{ roadmap.total_steps }} steps
+                        </div>
+                    </div>
+                    <div class="progress-bar-sm">
+                        <div class="progress-fill" style="width: {{ roadmap.calculate_overall_progress }}%"></div>
+                    </div>
+                    <div class="roadmap-compact-progress">{{ roadmap.calculate_overall_progress }}% complete</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-message">No active roadmaps</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="activity-section">
+            <h3 class="section-title">📝 Recent Activity</h3>
+            
+            {% if child_data.recent_activity %}
+            <div class="activity-list-compact">
+                {% for activity in child_data.recent_activity|slice:":3" %}
+                <div class="activity-item-compact">
+                    <div class="activity-icon-sm">{{ activity.icon }}</div>
+                    <div class="activity-content-compact">
+                        <div class="activity-text-sm">{{ activity.text }}</div>
+                        <div class="activity-date-sm">{{ activity.date|date:"M d" }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-message">No recent activity</p>
+            {% endif %}
+        </div>
+
+    </div>
+    {% endfor %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .parent-dashboard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    /* Welcome Section */
+    .welcome-section {
+        margin-bottom: 3rem;
+        text-align: center;
+    }
+
+    .welcome-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .welcome-subtitle {
+        font-size: 1.1rem;
+        color: #6B7280;
+    }
+
+    /* Student Card */
+    .student-card {
+        background: white;
+        border-radius: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 2px solid #E5E7EB;
+    }
+
+    .student-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #E5E7EB;
+    }
+
+    .student-name {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .student-subtitle {
+        color: #6B7280;
+        font-size: 0.95rem;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+        padding: 1.25rem;
+        border-radius: 1rem;
+        text-align: center;
+        border: 1px solid #E5E7EB;
+    }
+
+    .metric-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-label {
+        font-size: 0.75rem;
+        color: #6B7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .metric-detail {
+        font-size: 0.75rem;
+        color: #9CA3AF;
+        margin-top: 0.25rem;
+    }
+
+    /* Section Title */
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 1rem;
+    }
+
+    .subjects-section,
+    .roadmaps-section,
+    .activity-section {
+        margin-bottom: 2rem;
+    }
+
+    /* Compact Subjects Grid */
+    .subjects-grid-compact {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .subject-compact-card {
+        background: #F9FAFB;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #E5E7EB;
+    }
+
+    .subject-compact-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .subject-icon-sm {
+        font-size: 1.5rem;
+    }
+
+    .subject-compact-name {
+        font-weight: 600;
+        color: #111827;
+        font-size: 0.95rem;
+    }
+
+    .subject-compact-stats {
+        font-size: 0.8rem;
+        color: #6B7280;
+    }
+
+    .progress-bar-sm {
+        background: #E5E7EB;
+        height: 0.5rem;
+        border-radius: 0.25rem;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+
+    .progress-fill {
+        background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+
+    .subject-compact-progress {
+        font-size: 0.75rem;
+        color: #6B7280;
+        text-align: right;
+    }
+
+    /* Roadmaps List */
+    .roadmaps-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .roadmap-compact-card {
+        background: #F9FAFB;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        border-left: 4px solid #10B981;
+    }
+
+    .roadmap-compact-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .roadmap-compact-title {
+        font-weight: 600;
+        color: #111827;
+        font-size: 0.95rem;
+    }
+
+    .roadmap-compact-meta {
+        font-size: 0.8rem;
+        color: #6B7280;
+    }
+
+    .roadmap-compact-progress {
+        font-size: 0.75rem;
+        color: #6B7280;
+        text-align: right;
+    }
+
+    /* Compact Activity List */
+    .activity-list-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .activity-item-compact {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: #F9FAFB;
+        border-radius: 0.5rem;
+    }
+
+    .activity-icon-sm {
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .activity-text-sm {
+        color: #111827;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .activity-date-sm {
+        color: #9CA3AF;
+        font-size: 0.75rem;
+    }
+
+    /* Empty Message */
+    .empty-message {
+        text-align: center;
+        padding: 2rem;
+        color: #9CA3AF;
+        font-style: italic;
+    }
+
+    /* Button */
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: #3B82F6;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2563EB;
+        transform: translateY(-1px);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .parent-dashboard-container {
+            padding: 1rem;
+        }
+
+        .welcome-title {
+            font-size: 1.75rem;
+        }
+
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .subjects-grid-compact {
+            grid-template-columns: 1fr;
+        }
+
+        .student-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}

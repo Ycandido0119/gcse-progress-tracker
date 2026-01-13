@@ -1,13 +1,14 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.contrib import messages
 from django.db import transaction
 from .models import (
     Subject, Feedback, TermGoal, StudySession, 
-    Roadmap, RoadmapStep, ChecklistItem
+    Roadmap, RoadmapStep, ChecklistItem, UserProfile
 )
 from .ai_service import get_ai_service, RoadmapGenerationError
 from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm
@@ -73,9 +74,11 @@ def dashboard(request):
             subject_labels.append(subject.get_name_display())
             subject_data.append(float(hours))
 
+  
+
     progress_data = {
-        'completed': completed_tasks,
-        'remaining': total_tasks - completed_tasks
+        'labels': ['Completed', 'Remaining'],
+        'data': [completed_tasks, total_tasks - completed_tasks]
     }
 
     recent_activity = get_recent_activity(user, limit=5)
@@ -762,4 +765,168 @@ def toggle_checklist_item(request, pk):
         'roadmap_progress': round(roadmap_progress, 1),
         'roadmap_completed': roadmap_completed,
         'roadmap_total': roadmap_total, 
-    })  
+    })
+
+@login_required
+def parent_dashboard(request):
+    """
+    Parent dashboard showing aggregated data for all their children.
+    """
+    try:
+        user_profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        messages.error(request, "You don't have a user profile. Please contact support.")
+        return redirect('tracker:dashboard')
+    
+    # Check if user is a parent
+    if user_profile.role != 'parent':
+        messages.error(request, "Access denied. This page is for parents only.")
+        return redirect('tracker:dashboard')
+    
+    # Get all linked students
+    children = user_profile.linked_students.all()
+    
+    if not children.exists():
+        messages.info(request, "No students linked to your account yet. Please contact support to link your child's account.")
+        return redirect('tracker:dashboard')
+    
+    # Get data for each child
+    children_data = []
+    for child in children:
+        # Get subjects
+        subjects = Subject.objects.filter(user=child).prefetch_related(
+            'term_goals', 'study_sessions', 'roadmaps'
+        )
+        
+        # Calculate metrics
+        total_hours = StudySession.objects.filter(
+            subject__user=child
+        ).aggregate(total=Sum('hours_spent'))['total'] or 0
+        
+        total_tasks = ChecklistItem.objects.filter(
+            roadmap_step__roadmap__subject__user=child
+        ).count()
+        
+        completed_tasks = ChecklistItem.objects.filter(
+            roadmap_step__roadmap__subject__user=child,
+            is_completed=True
+        ).count()
+        
+        completion_percentage = (
+            round((completed_tasks / total_tasks) * 100, 1)
+            if total_tasks > 0 else 0
+        )
+        
+        # Study streak
+        study_streak = calculate_study_streak(child)
+        
+        # Get active roadmaps
+        active_roadmaps = Roadmap.objects.filter(
+            subject__user=child,
+            is_active=True
+        ).select_related('subject')
+        
+        # Recent activity
+        recent_activity = get_recent_activity(child, limit=5)
+        
+        # Average daily hours (last 30 days)
+        from django.utils import timezone
+        thirty_days_ago = timezone.now() - timezone.timedelta(days=30)
+        hours_last_30 = StudySession.objects.filter(
+            subject__user=child,
+            session_date__gte=thirty_days_ago
+        ).aggregate(total=Sum('hours_spent'))['total'] or 0
+        avg_daily_hours = round(hours_last_30 / 30, 1)
+        
+        children_data.append({
+            'student': child,
+            'subjects': subjects,
+            'total_hours': round(total_hours, 1),
+            'completion_percentage': completion_percentage,
+            'completed_tasks': completed_tasks,
+            'total_tasks': total_tasks,
+            'study_streak': study_streak,
+            'active_roadmaps': active_roadmaps,
+            'recent_activity': recent_activity,
+            'avg_daily_hours': avg_daily_hours,
+        })
+    
+    context = {
+        'user_profile': user_profile,
+        'children_data': children_data,
+        'total_children': children.count(),
+    }
+    
+    return render(request, 'tracker/parent_dashboard.html', context)
+
+
+@login_required
+def parent_student_detail(request, student_id):
+    """
+    Detailed view of a specific student's progress for parents.
+    """
+    try:
+        user_profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        messages.error(request, "Access denied.")
+        return redirect('tracker:dashboard')
+    
+    # Check if user is a parent
+    if user_profile.role != 'parent':
+        messages.error(request, "Access denied. This page is for parents only.")
+        return redirect('tracker:dashboard')
+    
+    # Verify this student is linked to this parent
+    student = get_object_or_404(User, id=student_id)
+    if student not in user_profile.linked_students.all():
+        messages.error(request, "Access denied. This student is not linked to your account.")
+        return redirect('tracker:parent_dashboard')
+    
+    # Get all student data
+    subjects = Subject.objects.filter(user=student).prefetch_related(
+        'term_goals', 'study_sessions', 'roadmaps', 'feedbacks'
+    )
+    
+    # Calculate metrics
+    total_hours = StudySession.objects.filter(
+        subject__user=student
+    ).aggregate(total=Sum('hours_spent'))['total'] or 0
+    
+    study_streak = calculate_study_streak(student)
+    
+    total_tasks = ChecklistItem.objects.filter(
+        roadmap_step__roadmap__subject__user=student
+    ).count()
+    
+    completed_tasks = ChecklistItem.objects.filter(
+        roadmap_step__roadmap__subject__user=student,
+        is_completed=True
+    ).count()
+    
+    completion_percentage = (
+        round((completed_tasks / total_tasks) * 100, 1)
+        if total_tasks > 0 else 0
+    )
+    
+    # Get recent activity
+    recent_activity = get_recent_activity(student, limit=10)
+    
+    # Get active roadmaps with progress
+    active_roadmaps = Roadmap.objects.filter(
+        subject__user=student,
+        is_active=True
+    ).select_related('subject')
+    
+    context = {
+        'student': student,
+        'subjects': subjects,
+        'total_hours': round(total_hours, 1),
+        'study_streak': study_streak,
+        'completion_percentage': completion_percentage,
+        'completed_tasks': completed_tasks,
+        'total_tasks': total_tasks,
+        'recent_activity': recent_activity,
+        'active_roadmaps': active_roadmaps,
+    }
+    
+    return render(request, 'tracker/parent_student_detail.html', context)

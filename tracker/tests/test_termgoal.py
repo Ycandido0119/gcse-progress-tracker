@@ -81,8 +81,6 @@ class TermGoalFormTest(TestCase):
             'deadline': (date.today() + timedelta(days=90)).isoformat()
         }
         form = TermGoalForm(data=form_data)
-        if not form.is_valid():
-            print(f"Form errors: {form.errors}")
         self.assertTrue(form.is_valid())
 
     def test_form_deadline_in_past(self):
@@ -145,11 +143,6 @@ class TermGoalViewTest(TestCase):
             'deadline': (date.today() + timedelta(days=90)).isoformat()
         }
         response = self.client.post(url, data)
-        
-        if response.status_code != 302:
-            print(f"Response status: {response.status_code}")
-            if hasattr(response, 'context') and response.context and 'form' in response.context:
-                print(f"Form errors: {response.context['form'].errors}")
         
         # Should redirect to subject detail
         self.assertEqual(response.status_code, 302)
