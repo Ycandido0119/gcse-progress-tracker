@@ -1,0 +1,15 @@
+Hi {{ parent_name }},
+
+You have {{ alert_count }} new progress alert{{ alert_count|pluralize }}.
+
+{% for alert in alerts %}
+{{ alert.title }}
+{{ alert.message }}
+{{ alert.created_at|date:"F d, Y - g:i A" }}
+---
+{% endfor %}
+
+View full dashboard: {{ dashboard_url }}
+Update preferences: {{ preferences_url }}
+
+© 2026 GCSE Progress Tracker

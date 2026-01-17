@@ -137,16 +137,44 @@ class StudySessionAdmin(admin.ModelAdmin):
 
 @admin.register(ProgressAlert)
 class ProgressAlertAdmin(admin.ModelAdmin):
-    list_display = ['student', 'subject', 'alert_type', 'is_sent', 'created_at', 'sent_at']
-    list_filter = ['alert_type', 'is_sent', 'created_at']
-    search_fields = ['student__username', 'message']
-    readonly_fields = ['created_at', 'sent_at']
+    list_display = ['title', 'student', 'parent', 'alert_type', 'severity', 'is_read', 'created_at']
+    list_filter = ['alert_type', 'severity', 'is_sent', 'is_read', 'created_at']
+    search_fields = ['student__username', 'parent__username', 'title', 'message']
+    readonly_fields = ['created_at', 'sent_at', 'read_at']
     date_hierarchy = 'created_at'
 
-    actions = ['mark_as_sent']
+    fieldsets = (
+        ('Alert Information', {
+            'fields': ('alert_type', 'severity', 'title', 'message')
+        }),
+        ('Users', {
+            'fields': ('parent', 'student')
+        }),
+        ('Related Objects', {
+            'fields': ('related_subject', 'related_roadmap'),
+            'classes': ('collapse'),
+        }),
+        ('Status', {
+            'fields': ('is_sent', 'sent_at', 'is_read', 'read_at')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',),
+        }),
+    )
+
+    actions = ['mark_as_sent', 'mark_as_read']
 
     def mark_as_sent(self, request, queryset):
+        """Mark selected alerts as sent."""
         for alert in queryset:
             alert.mark_as_sent()
         self.message_user(request, f"{queryset.count()} alert(s) marked as sent.")
     mark_as_sent.short_description = "Mark selected alerts as sent"
+
+    def mark_as_read(self, request, queryset):
+        """Mark selected alerts as read."""
+        for alert in queryset:
+            alert.mark_as_read()
+        self.message_user(request, f"{queryset.count()} alert(s) marked as read.")
+    mark_as_read.short_description = "Mark selected alerts as read"

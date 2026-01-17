@@ -8,13 +8,15 @@ from django.contrib import messages
 from django.db import transaction
 from .models import (
     Subject, Feedback, TermGoal, StudySession, 
-    Roadmap, RoadmapStep, ChecklistItem, UserProfile
+    Roadmap, RoadmapStep, ChecklistItem, UserProfile, ProgressAlert
 )
 from .ai_service import get_ai_service, RoadmapGenerationError
 from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm
 from django.db.models import Sum, Count, Q
 import json
 from datetime import date, timedelta
+from django.views.decorators.csrf import csrf_exempt
+
 
 @login_required
 def dashboard(request):
@@ -930,3 +932,109 @@ def parent_student_detail(request, student_id):
     }
     
     return render(request, 'tracker/parent_student_detail.html', context)
+
+@login_required
+def parent_alert_history(request):
+    """View alert histroy for parents."""
+    try:
+        user_profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        messages.error(request, "Access denied.")
+        return redirect('tracker:dashboard')
+    
+    # Check if user is a parent
+    if user_profile.role != 'parent':
+        messages.error(request, "Access denied. This page is for parents only.")
+        return redirect('tracker:dashboard')
+    
+    # Get all alerts for this parent
+    alerts = ProgressAlert.objects.filter(
+        parent=request.user
+    ).select_related('student', 'related_subject', 'related_roadmap')
+
+    # Filter by type if specified
+    alert_type = request.GET.get('type')
+    if alert_type:
+        alerts = alerts.filter(alert_type=alert_type)
+
+    # Filter by student if specified
+    student_id = request.GET.get('student')
+    if student_id:
+        alerts = alerts.filter(student_id=student_id)
+
+    # Filter by read status
+    show_unread_only = request.GET.get('unread') == 'true'
+    if show_unread_only:
+        alerts = alerts.filter(is_read=False)
+
+    # Get counts
+    total_alerts = ProgressAlert.objects.filter(parent=request.user).count()
+    unread_count = ProgressAlert.objects.filter(parent=request.user, is_read=False).count()
+
+    # Get children for filter
+    children = user_profile.get_children()
+
+    context = {
+        'alerts': alerts[:50], # Limit to 50 most recent
+        'total_alerts': total_alerts,
+        'unread_count': unread_count,
+        'children': children,
+        'selected_type': alert_type,
+        'selected_student': student_id,
+        'show_unread_only': show_unread_only,
+    }
+
+    return render(request, 'tracker/parent_alert_history.html', context)
+
+
+@login_required
+@require_POST
+def mark_alert_read(request, alert_id):
+    """Mark an alert as read (AJAX endpoint)."""
+    try:
+        user_profile = request.user.profile
+        if user_profile.role != 'parent':
+            return JsonResponse({'error': 'Access denied'}, status=403)
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'error', 'Access denied'}, status=403)
+    
+    alert = get_object_or_404(ProgressAlert, id=alert_id, parent=request.user)
+    alert.mark_as_read()
+
+    return JsonResponse({
+        'success': True,
+        'alert_id': alert_id,
+        'read_at': alert.read_at.isoformat() if alert.read_at else None
+    })
+
+
+@login_required
+@csrf_exempt
+def mark_all_alerts_read(request):
+    """Mark all alerts as read (AJAX endpoint)."""
+    # Allow GET for testing, but prefer POST in production
+    if request.method not in ['POST', 'GET']:
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+    
+    try:
+        user_profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'error': 'No profile'}, status=403)
+    
+    if user_profile.role != 'parent':
+        return JsonResponse({'error': 'Not a parent'}, status=403)
+    
+    unread_alerts = ProgressAlert.objects.filter(
+        parent=request.user,
+        is_read=False
+    )
+    
+    count = unread_alerts.count()
+    
+    for alert in unread_alerts:
+        alert.mark_as_read()
+    
+    return JsonResponse({
+        'success': True,
+        'count': count
+    })

@@ -33,6 +33,57 @@ class UserProfile(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Alert Preferences
+    alert_low_activity = models.BooleanField(
+        default=True,
+        help_text="Notify when student hasn't studied in X days"
+    )
+    alert_low_activity_days = models.IntegerField(
+        default=3,
+        help_text="Days of inactivity before alert"
+    )
+    alert_goal_at_risk = models.BooleanField(
+        default=True,
+        help_text="Notify when goal deadline approaching with low progress"
+    )
+    alert_goal_at_risk_days = models.IntegerField(
+        default=7,
+        help_text="Days before deadline to send alert"
+    )
+    alert_milestones = models.BooleanField(
+        default=True,
+        help_text="Notify on milestone achievements (25%, 50%, 75%, 100%)"
+    )
+    alert_roadmap_completed = models.BooleanField(
+        default=True,
+        help_text="Notify when student completes a roadmap"
+    )
+    alert_streak_broken = models.BooleanField(
+        default=True,
+        help_text="Notify when study streak is broken"
+    )
+    alert_new_feedback = models.BooleanField(
+        default=True,
+        help_text="Notify when new teacher feedback is added"
+    )
+
+    # Digest preferences
+    alert_frequency = models.CharField(
+        max_length=20,
+        choices = [
+            ('immediate', 'Immediate'),
+            ('daily', 'Daily Digest'),
+            ('weekly', 'Weekly Digest'),
+        ],
+        default='daily',
+        help_text="How often to send alert emails"
+    )
+    last_alert_sent = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last time alerts were sent to this parent"
+    )
+
     def __str__(self):
         return f"{self.full_name} ({self.get_role_display()})"
     
@@ -213,6 +264,35 @@ class Roadmap(models.Model):
         self.total_steps = self.steps.count()
         self.save()
 
+    def calculate_overall_progress(self):
+        """Calculate overall completion percentage for roadmap."""
+        total_items = ChecklistItem.objects.filter(
+            roadmap_step__roadmap=self
+        ).count()
+
+        if total_items == 0:
+            return 0
+        
+        completed_items = ChecklistItem.objects.filter(
+            roadmap_step__roadmap=self,
+            is_completed=True
+        ).count()
+
+        return round((completed_items / total_items) * 100, 1)
+    
+    def get_total_items(self):
+        """Get total number of checklist items across all steps."""
+        return ChecklistItem.objects.filter(
+            roadmap_step__roadmap=self,
+        ).count()
+    
+    def get_completed_items(self):
+        """Get number of completed checklist items."""
+        return ChecklistItem.objects.filter(
+            roadmap_step__roadmap=self,
+            is_completed=True
+        ).count()
+
     class Meta:
         ordering = ['-generated_at']
 
@@ -347,31 +427,99 @@ class StudySession(models.Model):
 
 class ProgressAlert(models.Model):
     """Automated alerts for parents when student falls behind."""
-    ALERT_TYPE_CHOICES = [
-        ('behind_schedule', 'Behind Schedule'),
-        ('no_activity', 'No Recent Activity'),
-        ('low_completion', 'Low Completion Rate'),
+    ALERT_TYPES = [
+        ('low_activity', 'Low Activity'),
+        ('goal_at_risk', 'Goal at Risk'),
+        ('milestone_achieved', 'Milestone Achieved'),
+        ('roadmap_completed', 'Roadmap Completed'),
+        ('streak_broken', 'Study Streak Broken'),
+        ('new_feedback', 'New Teacher Feedback'),
     ]
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='alerts')
+
+    SEVERITY_CHOICES = [
+        ('info', 'Info'),
+        ('warning', 'Warning'),
+        ('success', 'Success'),
+    ]
+    parent = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='received_alerts',
+        help_text="Parent recieving the alert"
+    )
     student = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='progress_alerts'
+        related_name='alerts_about',
+        help_text="Student this alert is about"
     )
-    alert_type = models.CharField(max_length=20, choices=ALERT_TYPE_CHOICES)
-    message = models.TextField()
-    is_sent = models.BooleanField(default=False)
+    alert_type = models.CharField(
+        max_length=30,
+        choices=ALERT_TYPES,
+        help_text="Type of alert"
+    )
+    severity = models.CharField(
+        max_length=10,
+        choices=SEVERITY_CHOICES,
+        default='info',
+        help_text="Alert severity level"
+    )
+    title = models.CharField(
+        max_length=200,
+        help_text="Alert title"
+    )
+    message = models.TextField(
+        help_text="Detailed alert message"
+    )
+    is_sent = models.BooleanField(
+        default=False,
+        help_text="Whether email notification was sent"
+    )
+    is_read = models.BooleanField(
+        default=False,
+        help_text="Whether parent has read the alert"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(null=True, blank=True)
+    read_at = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self):
-        return f"{self.get_alert_type_display()} - {self.subject.get_name_display()}"
-    
-    def mark_as_sent(self):
-        """Mark this alert as sent."""
-        self.is_sent = True
-        self.sent_at = timezone.now()
-        self.save()
-    
+    # Optional: Link to related object
+    related_subject = models.ForeignKey(
+        'Subject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Related subject if applicable"
+    )
+
+    related_roadmap = models.ForeignKey(
+        'Roadmap',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Related roadmap if applicable"
+    )
+
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['parent', 'is_read']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_alert_type_display()} - {self.student.username} ({self.created_at.date()})"
+    
+    def mark_as_read(self):
+        """Mark alert as read."""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+    def mark_as_sent(self):
+        """Mark alert as sent."""
+        if not self.is_sent:
+            self.is_sent = True
+            self.sent_at = timezone.now()
+            self.save()
