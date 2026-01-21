@@ -147,7 +147,10 @@
             <div class="user-info">
                 {% if user.is_authenticated %}
                     <span class="user-name">{{ user.profile.full_name }}</span>
-                    <a href="{% url 'logout' %}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">Logout</a>
+                    <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
                 {% endif %}
             </div>
         </div>

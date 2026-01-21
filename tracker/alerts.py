@@ -250,7 +250,7 @@ def generate_new_feedback_alerts():
     """Generate alerts when new teacher feedback is added."""
     alerts_created = 0
 
-    parent_profile = UserProfile.objects.filter(
+    parent_profiles = UserProfile.objects.filter(
         role='parent',
         alert_new_feedback=True
     )

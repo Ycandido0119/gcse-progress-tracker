@@ -21,6 +21,13 @@ from django.views.decorators.csrf import csrf_exempt
 @login_required
 def dashboard(request):
     """Dashboard with analytics and visualisations"""
+    # Redirects parents to parent dashboard
+    try:
+        if request.user.profile.role == 'parent':
+            return redirect('tracker:parent_dashboard')
+    except UserProfile.DoesNotExist:
+        pass
+
     user = request.user
     subjects = Subject.objects.filter(user=user).prefetch_related(
         'feedbacks', 'term_goals', 'study_sessions', 'roadmaps'
@@ -248,6 +255,17 @@ def add_subject(request):
 @login_required
 def subject_detail(request, pk):
     """View details of a specific subject"""
+
+    # Check if user is a parent
+    try:
+        if request.user.profile.role == 'parent':
+            # Parents should view subjects through parent dashboard
+            messages.info(request, "Please use the Parent Dashboard to view student subjects.")
+            return redirect('tracker:parent_dashboard')
+    except UserProfile.DoesNotExist:
+        pass
+
+    # Get subject fpr cirremt user only(students)
     subject = get_object_or_404(Subject, pk=pk, user=request.user)
     
     # Get all related data

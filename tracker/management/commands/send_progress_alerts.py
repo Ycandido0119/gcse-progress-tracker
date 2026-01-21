@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
-from django.utils import timezone
-from tracker.alerts import general_all_alerts, send_alert_emails
-
+from tracker.alerts import generate_all_alerts, send_alert_emails
+from tracker.models import UserProfile
 
 class Command(BaseCommand):
     help = 'Generate and send progress alerts to parents'
@@ -10,34 +9,46 @@ class Command(BaseCommand):
         parser.add_argument(
             '--dry-run',
             action='store_true',
-            help='Generate alerts but don\'t send emails',
+            help='Show what alerts would be generated without actually creating them',
         )
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS(
-            f'Starting alert generation at {timezone.now()}'
-        ))
-
-        # Generate alerts
-        self.stdout.write('Generating alerts...')
-        alerts_created = general_all_alerts()
-
-        self.stdout.write(self.style.SUCCESS(
-            f'✓ Created {alerts_created} new alert(s)'
-        ))
-
-        # Send emails
-        if not options['dry_run']:
-            self.stdout.write('Sending email notifications...')
-            emails_sent = send_alert_emails()
-
-            self.stdout.write(self.style.SUCCESS(
-                f'✓ Sent {emails_sent} email notification(s)'
-            ))
+        dry_run = options['dry_run']
+        
+        # Get all parents with email notifications enabled
+        parents = UserProfile.objects.filter(role='parent', email_notifications=True)
+        
+        self.stdout.write(f"Checking alerts for {parents.count()} parent(s)...")
+        
+        if dry_run:
+            self.stdout.write(self.style.WARNING("\n(Dry run mode - no alerts will actually be created)"))
+            
+            # Import the ProgressAlert model to count what would be created
+            from tracker.models import ProgressAlert
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            # Count existing alerts from last 24 hours
+            recent_alerts = ProgressAlert.objects.filter(
+                created_at__gte=timezone.now() - timedelta(hours=24)
+            ).count()
+            
+            self.stdout.write(f"\nAlerts created in last 24 hours: {recent_alerts}")
+            self.stdout.write("\nTo see what alerts would be generated, run without --dry-run flag")
+            self.stdout.write("(Don't worry - duplicate alerts within 24 hours are prevented)")
+            
         else:
-            self.stdout.write(self.style.WARNING(
-                '⚠ Dry run mode - emails not sent'
-            ))
-        self.stdout.write(self.style.SUCCESS(
-            f'Alert generation completed at {timezone.now()}'
-        ))
+            # Actually generate and send alerts
+            try:
+                alerts_created = generate_all_alerts()
+                
+                self.stdout.write(self.style.SUCCESS(f"\n✅ Generated {alerts_created} alert(s)"))
+                
+                # Send emails
+                emails_sent = send_alert_emails()
+                
+                self.stdout.write(self.style.SUCCESS(f"✅ Sent {emails_sent} email(s) to parent(s)"))
+                
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"\n❌ Error: {str(e)}"))
+                raise
