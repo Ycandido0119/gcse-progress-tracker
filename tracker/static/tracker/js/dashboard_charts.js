@@ -1,5 +1,5 @@
-// Dashboard Charts Initialization
-// This file initializes all Chart.js charts on the dashboard
+// Dashboard Charts Initialization - RESPONSIVE VERSION
+// Optimized for mobile, tablet, and desktop
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Dashboard charts script loaded');
@@ -10,36 +10,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const progressCanvas = document.getElementById('progressDonutChart');
 
     // Check if canvases exist
-    if (!weeklyCanvas) {
-        console.error('Weekly chart canvas not found');
-        return;
-    }
-    if (!subjectCanvas) {
-        console.error('Subject chart canvas not found');
-        return;
-    }
-    if (!progressCanvas) {
-        console.error('Progress chart canvas not found');
+    if (!weeklyCanvas || !subjectCanvas || !progressCanvas) {
+        console.error('One or more chart canvases not found');
         return;
     }
 
     console.log('All canvases found successfully!');
+
+    // Helper function to detect screen size
+    function isMobile() {
+        return window.innerWidth < 576;
+    }
+
+    function isTablet() {
+        return window.innerWidth >= 576 && window.innerWidth < 992;
+    }
+
+    // Get responsive font size
+    function getFontSize() {
+        if (isMobile()) return 10;
+        if (isTablet()) return 11;
+        return 12;
+    }
 
     // Get raw data
     const weeklyDataRaw = weeklyCanvas.dataset.chartData;
     const subjectDataRaw = subjectCanvas.dataset.chartData;
     const progressDataRaw = progressCanvas.dataset.chartData;
 
-    console.log('Raw weekly data:', weeklyDataRaw);
-    console.log('Raw subject data:', subjectDataRaw);
-    console.log('Raw progress data:', progressDataRaw);
-
-    // Parse data - Django passes valid JSON, just parse it directly
+    // Parse data
     let weeklyData, subjectData, progressData;
     
     try {
         weeklyData = JSON.parse(weeklyDataRaw);
-        console.log('Parsed weekly data successfully:', weeklyData);
+        console.log('Parsed weekly data:', weeklyData);
     } catch (e) {
         console.error('Error parsing weekly data:', e);
         weeklyData = { labels: [], data: [] };
@@ -47,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     try {
         subjectData = JSON.parse(subjectDataRaw);
-        console.log('Parsed subject data successfully:', subjectData);
+        console.log('Parsed subject data:', subjectData);
     } catch (e) {
         console.error('Error parsing subject data:', e);
         subjectData = { labels: [], data: [] };
@@ -55,33 +59,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     try {
         progressData = JSON.parse(progressDataRaw);
-        console.log('Parsed progress data successfully:', progressData);
+        console.log('Parsed progress data:', progressData);
     } catch (e) {
         console.error('Error parsing progress data:', e);
         progressData = { labels: ['Completed', 'Remaining'], data: [0, 100] };
     }
 
-    // Verify data
-    console.log('Weekly labels:', weeklyData.labels);
-    console.log('Weekly data:', weeklyData.data);
-    console.log('Subject labels:', subjectData.labels);
-    console.log('Subject data:', subjectData.data);
-    console.log('Progress data:', progressData);
-
     // Chart.js default configuration
     Chart.defaults.font.family = "'Inter', 'system-ui', '-apple-system', 'sans-serif'";
     Chart.defaults.color = '#6B7280';
 
-    // 1. Weekly Study Time Chart (Line Chart)
+    // Store chart instances for resize handling
+    let weeklyChart, subjectChart, progressChart;
+
+    // 1. Weekly Study Time Chart (Line Chart) - RESPONSIVE
     try {
         const weeklyCtx = weeklyCanvas.getContext('2d');
         
-        console.log('Creating weekly chart with data:', {
-            labels: weeklyData.labels,
-            data: weeklyData.data
-        });
-        
-        const weeklyChart = new Chart(weeklyCtx, {
+        weeklyChart = new Chart(weeklyCtx, {
             type: 'line',
             data: {
                 labels: weeklyData.labels || [],
@@ -90,28 +85,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     data: weeklyData.data || [],
                     borderColor: '#3B82F6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderWidth: 3,
+                    borderWidth: isMobile() ? 2 : 3,
                     fill: true,
                     tension: 0.4,
                     pointBackgroundColor: '#3B82F6',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
+                    pointRadius: isMobile() ? 3 : 5,
+                    pointHoverRadius: isMobile() ? 5 : 7
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: isMobile() ? 1.2 : 2,
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        padding: isMobile() ? 10 : 12,
                         titleColor: '#fff',
                         bodyColor: '#fff',
+                        titleFont: {
+                            size: getFontSize() + 1,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: getFontSize()
+                        },
                         borderColor: '#3B82F6',
                         borderWidth: 1,
                         displayColors: false,
@@ -126,6 +129,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: {
                         beginAtZero: true,
                         ticks: {
+                            font: {
+                                size: getFontSize()
+                            },
                             callback: function(value) {
                                 return value + 'h';
                             }
@@ -135,6 +141,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     x: {
+                        ticks: {
+                            font: {
+                                size: getFontSize()
+                            },
+                            maxRotation: 0,
+                            minRotation: 0
+                        },
                         grid: {
                             display: false
                         }
@@ -147,19 +160,23 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error creating weekly chart:', e);
     }
 
-    // 2. Study by Subject Chart (Bar Chart)
+    // 2. Study by Subject Chart (Bar Chart) - RESPONSIVE WITH LABEL FIX
     try {
         const subjectCtx = subjectCanvas.getContext('2d');
         
-        console.log('Creating subject chart with data:', {
-            labels: subjectData.labels,
-            data: subjectData.data
+        // Truncate labels on mobile
+        const originalLabels = subjectData.labels || [];
+        const displayLabels = originalLabels.map(label => {
+            if (isMobile() && label.length > 9) {
+                return label.substring(0, 9) + '...';
+            }
+            return label;
         });
         
-        const subjectChart = new Chart(subjectCtx, {
+        subjectChart = new Chart(subjectCtx, {
             type: 'bar',
             data: {
-                labels: subjectData.labels || [],
+                labels: displayLabels,
                 datasets: [{
                     label: 'Total Hours',
                     data: subjectData.data || [],
@@ -178,25 +195,39 @@ document.addEventListener('DOMContentLoaded', function() {
                         'rgb(251, 146, 60)'
                     ],
                     borderWidth: 2,
-                    borderRadius: 8
+                    borderRadius: isMobile() ? 4 : 8,
+                    barThickness: isMobile() ? 35 : isTablet() ? 45 : 60,
+                    maxBarThickness: 80
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: isMobile() ? 1 : isTablet() ? 1.3 : 1.5,
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        padding: isMobile() ? 10 : 12,
                         titleColor: '#fff',
                         bodyColor: '#fff',
+                        titleFont: {
+                            size: getFontSize() + 1,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: getFontSize()
+                        },
                         borderColor: '#3B82F6',
                         borderWidth: 1,
                         displayColors: false,
                         callbacks: {
+                            // Show full label in tooltip
+                            title: function(context) {
+                                return originalLabels[context[0].dataIndex];
+                            },
                             label: function(context) {
                                 return context.parsed.y.toFixed(1) + ' hours';
                             }
@@ -207,6 +238,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: {
                         beginAtZero: true,
                         ticks: {
+                            font: {
+                                size: getFontSize()
+                            },
                             callback: function(value) {
                                 return value + 'h';
                             }
@@ -216,6 +250,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     x: {
+                        ticks: {
+                            font: {
+                                size: getFontSize()
+                            },
+                            maxRotation: 0,
+                            minRotation: 0
+                        },
                         grid: {
                             display: false
                         }
@@ -228,13 +269,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error creating subject chart:', e);
     }
 
-    // 3. Overall Progress Chart (Doughnut Chart)
+    // 3. Overall Progress Chart (Doughnut Chart) - RESPONSIVE
     try {
         const progressCtx = progressCanvas.getContext('2d');
         
-        console.log('Creating progress chart with data:', progressData);
-        
-        const progressChart = new Chart(progressCtx, {
+        progressChart = new Chart(progressCtx, {
             type: 'doughnut',
             data: {
                 labels: progressData.labels || ['Completed', 'Remaining'],
@@ -253,25 +292,34 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: 1,
                 cutout: '70%',
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            padding: 20,
+                            padding: isMobile() ? 12 : 20,
                             font: {
-                                size: 13
+                                size: getFontSize()
                             },
                             usePointStyle: true,
-                            pointStyle: 'circle'
+                            pointStyle: 'circle',
+                            boxWidth: isMobile() ? 8 : 10
                         }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        padding: isMobile() ? 10 : 12,
                         titleColor: '#fff',
                         bodyColor: '#fff',
+                        titleFont: {
+                            size: getFontSize() + 1,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: getFontSize()
+                        },
                         borderColor: '#22C55E',
                         borderWidth: 1,
                         callbacks: {
@@ -290,6 +338,21 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) {
         console.error('Error creating progress chart:', e);
     }
+
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            // Destroy and recreate charts on resize for better responsiveness
+            if (weeklyChart) weeklyChart.destroy();
+            if (subjectChart) subjectChart.destroy();
+            if (progressChart) progressChart.destroy();
+            
+            // Recreate charts (this will re-run the initialization)
+            location.reload(); // Simple solution for now
+        }, 500);
+    });
 
     console.log('Chart initialization complete!');
 });

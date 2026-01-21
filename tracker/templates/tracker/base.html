@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +9,7 @@
         * {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;;
+            box-sizing: border-box;
         }
 
         body {
@@ -45,7 +46,7 @@
             gap: 1rem;
         }
         .user-name {
-            color: #6b7280
+            color: #6b7280;
         }
 
         /* Container */
@@ -124,26 +125,59 @@
             background: #dc2626;
         }
 
-        /* Responsive */
+        /* Basic Responsive */
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
             }
             .header-content {
-                flex-direction: column;
-                gap: 1rem;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+            .user-name {
+                display: none;
             }
         }
     </style>
-    {%block extra_css%}{%endblock%}
+    
+    <!-- Load Responsive CSS -->
+    <link rel="stylesheet" href="{% static 'tracker/css/responsive.css' %}">
+    
+    <!-- Load Navigation CSS -->
+    <link rel="stylesheet" href="{% static 'tracker/css/navigation.css' %}">
+    
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Header -->
     <header class="header">
         <div class="header-content">
+            <!-- Hamburger Menu (Mobile) -->
+            <button class="hamburger" aria-label="Toggle menu">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+            
+            <!-- Logo -->
             <a href="{% url 'tracker:dashboard' %}" class="logo">
                 📚 GCSE Progress Tracker
             </a>
+            
+            <!-- Desktop Navigation -->
+            <nav class="nav-menu">
+                {% if user.is_authenticated %}
+                    {% if user.profile.role == 'parent' %}
+                        <a href="{% url 'tracker:parent_dashboard' %}">Dashboard</a>
+                        <a href="{% url 'tracker:parent_alert_history' %}">Alerts</a>
+                    {% else %}
+                        <a href="{% url 'tracker:dashboard' %}">Dashboard</a>
+                        <a href="{% url 'tracker:add_subject' %}">Add Subject</a>
+                    {% endif %}
+                {% endif %}
+            </nav>
+            
+            <!-- User Info -->
             <div class="user-info">
                 {% if user.is_authenticated %}
                     <span class="user-name">{{ user.profile.full_name }}</span>
@@ -155,6 +189,40 @@
             </div>
         </div>
     </header>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu">
+        <div class="mobile-menu-header">
+            <div class="mobile-menu-title">Menu</div>
+        </div>
+        <nav class="mobile-menu-nav">
+            {% if user.is_authenticated %}
+                {% if user.profile.role == 'parent' %}
+                    <a href="{% url 'tracker:parent_dashboard' %}" class="mobile-menu-item">
+                        <span class="mobile-menu-icon">📊</span>
+                        Dashboard
+                    </a>
+                    <a href="{% url 'tracker:parent_alert_history' %}" class="mobile-menu-item">
+                        <span class="mobile-menu-icon">🔔</span>
+                        Alerts
+                    </a>
+                {% else %}
+                    <a href="{% url 'tracker:dashboard' %}" class="mobile-menu-item">
+                        <span class="mobile-menu-icon">📊</span>
+                        Dashboard
+                    </a>
+                    <div class="nav-divider"></div>
+                    <a href="{% url 'tracker:add_subject' %}" class="mobile-menu-item">
+                        <span class="mobile-menu-icon">➕</span>
+                        Add Subject
+                    </a>
+                {% endif %}
+            {% endif %}
+        </nav>
+    </div>
+    
+    <!-- Menu Backdrop -->
+    <div class="menu-backdrop"></div>
 
     <!-- Messages -->
     {% if messages %}
@@ -176,6 +244,9 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Navigation Script -->
+    <script src="{% static 'tracker/js/navigation.js' %}"></script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>
