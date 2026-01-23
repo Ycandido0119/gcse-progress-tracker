@@ -10,3 +10,8 @@ python manage.py collectstatic --no-input
 
 # Run migrations
 python manage.py migrate
+
+# Create demo users for testing
+python manage.py create_demo_users
+
+echo "✅ Build completed successfully!"
