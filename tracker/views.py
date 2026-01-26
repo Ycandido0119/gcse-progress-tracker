@@ -11,7 +11,7 @@ from .models import (
     Roadmap, RoadmapStep, ChecklistItem, UserProfile, ProgressAlert
 )
 from .ai_service import get_ai_service, RoadmapGenerationError
-from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm, UserRegistrationForm
+from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm, UserRegistrationForm, LinkStudentForm
 from django.db.models import Sum, Count, Q
 import json
 from datetime import date, timedelta
@@ -806,11 +806,7 @@ def parent_dashboard(request):
     
     # Get all linked students
     children = user_profile.linked_students.all()
-    
-    if not children.exists():
-        messages.info(request, "No students linked to your account yet. Please contact support to link your child's account.")
-        return redirect('tracker:dashboard')
-    
+
     # Get data for each child
     children_data = []
     for child in children:
@@ -876,9 +872,48 @@ def parent_dashboard(request):
         'user_profile': user_profile,
         'children_data': children_data,
         'total_children': children.count(),
+        'has_children': children.exists(),
     }
     
     return render(request, 'tracker/parent_dashboard.html', context)
+
+@login_required
+def link_student(request):
+    """Allow parents to link a student to their account."""
+    try:
+        user_profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        messages.error(request, "Access denied.")
+        return redirect('login')
+    
+    # Check if user is a parent
+    if user_profile.role != 'parent':
+        messages.error(request, "Only parent accounts can link students.")
+        return redirect('tracker:dashboard')
+    
+    if request.method == 'POST':
+        form = LinkStudentForm(request.POST, parent_user=request.user)
+        if form.is_valid():
+            username = form.cleaned_data['student_username']
+            student = User.objects.get(username=username)
+
+            # Link the student
+            user_profile.linked_students.add(student)
+
+            messages.success(
+                request,
+                f' Successfully linked {student.username}\'s account! You can monitor their progress.'
+            )
+            return redirect('tracker:parent_dashboard')
+        
+    else:
+        form = LinkStudentForm(parent_user=request.user)
+
+    context = {
+        'form': form,
+    }
+
+    return render(request, 'tracker/link_student.html', context)
 
 
 @login_required

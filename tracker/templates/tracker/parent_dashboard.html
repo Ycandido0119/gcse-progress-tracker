@@ -8,8 +8,34 @@
     <!-- Welcome Header -->
     <div class="welcome-section">
         <h1 class="welcome-title">Parent Dashboard 👨‍👩‍👧‍👦</h1>
-        <p class="welcome-subtitle">Monitor your {{ total_children }} {% if total_children == 1 %}child's{% else %}children's{% endif %} study progress</p>
+        {% if has_children %}
+            <p class="welcome-subtitle">Monitor your {{ total_children }} {% if total_children == 1 %}child's{% else %}children's{% endif %} study progress</p>
+        {% else %}
+            <p class="welcome-subtitle">Welcome to your parent monitoring dashboard</p>
+        {% endif %}
     </div>
+
+    {% if not has_children %}
+        <!-- Empty State for Parents with No Linked Students -->
+        <div style="max-width: 600px; margin: 0 auto; text-align: center; padding: 2rem; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 2px solid #E5E7EB;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">👨‍👩‍👧</div>
+            <h2 style="font-size: 1.5rem; color: #111827; margin-bottom: 1rem; font-weight: 700;">No Students Linked Yet</h2>
+            <p style="color: #6B7280; margin-bottom: 1.5rem; line-height: 1.6;">
+                Your parent account has been created successfully! To monitor your child's GCSE progress, their student account needs to be linked to yours.
+            </p>
+            <div style="background: #DBEAFE; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #3B82F6; text-align: left; margin-bottom: 1.5rem;">
+                <p style="color: #1E40AF; margin: 0 0 0.75rem 0; font-weight: 600;">
+                    📋 Next Steps:
+                </p>
+                <p style="color: #1E40AF; margin: 0 0 1rem 0; line-height: 1.6;">
+                    Ask your child for their username, then click the button below to link their account to yours. Once linked, you'll be able to view all their progress, subjects, and study activity here.
+                </p>
+            </div>
+            <a href="{% url 'tracker:link_student' %}" class="btn btn-primary" style="display: inline-block; background: #3B82F6; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">
+                🔗 Link Student Account
+            </a>
+            </div>
+    {% else %}
 
     <!-- Children Cards -->
     {% for child_data in children_data %}
@@ -18,7 +44,7 @@
         <!-- Student Header -->
         <div class="student-header">
             <div class="student-info">
-                <h2 class="student-name">📚 {{ child_data.student.username|title }}</h2>
+                <h2 class="student-name">📚 {{ child_data.student.profile.full_name|default:child_data.student.username }}</h2>
                 <p class="student-subtitle">{{ child_data.subjects.count }} subject{% if child_data.subjects.count != 1 %}s{% endif %}</p>
             </div>
             <a href="{% url 'tracker:parent_student_detail' child_data.student.id %}" class="btn btn-primary">
@@ -145,6 +171,7 @@
 
     </div>
     {% endfor %}
+    {% endif %}
 
 </div>
 

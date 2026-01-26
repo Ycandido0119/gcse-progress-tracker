@@ -1,6 +1,6 @@
 from django import forms
 from datetime import date
-from .models import Subject, Feedback, TermGoal, StudySession
+from .models import Subject, Feedback, TermGoal, StudySession, UserProfile
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 
@@ -295,4 +295,54 @@ class UserRegistrationForm(UserCreationForm):
             raise forms.ValidationError(
                 'This username is already taken. Please choose a different username.'
             )
+        return username
+    
+
+class LinkStudentForm(forms.Form):
+    """Form for parents to link a student by username."""
+
+    student_username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Enter student username',
+        }),
+        label='Student Username',
+        help_text='Ask your child for their username, then enter it here to link their account.'
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.parent_user = kwargs.pop('parent_user', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_student_username(self):
+        """Validate that the student exists and isn't already linked."""
+        username = self.cleaned_data.get('student_username')
+
+        # Check if user exists
+        try:
+            student = User.objects.get(username=username)
+        except User.DoesNotExist:
+            raise forms.ValidationError(
+                f'No user found with username "{username}". Please check the spelling and try again.'
+            )
+        
+        # Check if user is a student
+        try:
+            profile = student.profile
+            if profile.role != 'student':
+                raise forms.ValidationError(
+                    f'User "{username}" is not a student account. Only student accoutns can be linked.'
+                )
+        except UserProfile.DoesNotExist:
+            raise forms.ValidationError(
+                f'User "{username}" does not have a profile. Please contact support.'
+            )
+        
+        # Check if already linked to this parent
+        if self.parent_user and student in self.parent_user.profile.linked_students.all():
+            raise forms.ValidationError(
+                f'"{username}" is already linked to your account.'
+            )
+        
         return username

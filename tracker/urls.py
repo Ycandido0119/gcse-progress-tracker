@@ -42,6 +42,7 @@ urlpatterns = [
 
     # Parent Dashboard URLs
     path('parent/dashboard/', views.parent_dashboard, name='parent_dashboard'),
+    path('parent/link-student/', views.link_student, name='link_student'),
     path('parent/student/<int:student_id>/', views.parent_student_detail, name='parent_student_detail'),
 
     # Alerts URLs
