@@ -7,6 +7,9 @@ urlpatterns = [
     # Dashboard
     path('', views.dashboard, name='dashboard'),
 
+    # Registration URLs
+    path('accounts/register/', views.register, name='register'),
+
     # Subject URLs
     path('subjects/add/', views.add_subject, name='add_subject'),
     path('subjects/<int:pk>/', views.subject_detail, name='subject_detail'),

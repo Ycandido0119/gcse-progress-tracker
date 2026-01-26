@@ -1,6 +1,8 @@
 from django import forms
 from datetime import date
 from .models import Subject, Feedback, TermGoal, StudySession
+from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
 
 
 class SubjectForm(forms.ModelForm):
@@ -206,3 +208,91 @@ class StudySessionForm(forms.ModelForm):
                 )
             
         return hours
+    
+
+class UserRegistrationForm(UserCreationForm):
+    """Form for new user registration with role selection."""
+
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'your.email@example.com',
+        }),
+        label='Email address *',
+        help_text='We\'ll never share your email with anyone else.'
+    )
+
+    full_name = forms.CharField(
+        max_length=200,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Your full name',
+        }),
+        label='Full Name *',
+        help_text='Your first and last name'
+    )
+
+    role = forms.ChoiceField(
+        choices=[
+            ('student', 'Student - I want to track my own progress'),
+            ('parent', 'Parent - I want to monitor my child\'s progress'),
+        ],
+        widget=forms.RadioSelect(attrs={
+            'class': 'form-radio',
+        }),
+        label='I am a *',
+        required=True,
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'full_name', 'role', 'password1', 'password2']
+        widgets = {
+            'username': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Choose a username',
+            }),
+        }
+        labels = {
+            'username': 'Username *',
+        }
+        helps_texts = {
+            'username': '150 characters or fewer. Letters, digits and @/./+/_ only.',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Style password fields to match
+        self.fields['password1'].widget.attrs.update({
+            'class': 'form-input',
+            'placeholder': 'Create a password',
+        })
+        self.fields['password1'].label = 'Password *'
+        self.fields['password1'].help_text = 'Your password must contain at least 8 characters.'
+
+        self.fields['password2'].widget.attrs.update({
+            'class': 'form-input',
+            'placeholder': 'Confirm your password',
+        })
+        self.fields['password2'].label = 'Confirm Password *'
+        self.fields['password2'].help_text = 'Enter the same password as before, for verification.'
+
+    def clean_email(self):
+        """Validate that email is unique."""
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError(
+                'This email address is already registered. Please user a different email or try logging in.'
+            )
+        return email
+    
+    def clean_username(self):
+        """Validate username with custom message."""
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError(
+                'This username is already taken. Please choose a different username.'
+            )
+        return username

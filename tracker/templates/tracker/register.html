@@ -1,0 +1,269 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Sign Up - GCSE Progress Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .register-container {
+        max-width: 500px;
+        margin: 3rem auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .register-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .register-header h1 {
+        font-size: 1.75rem;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .register-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-family: inherit;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #3B82F6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-help {
+        font-size: 0.875rem;
+        color: #6B7280;
+        margin-top: 0.25rem;
+    }
+
+    .form-radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .radio-option {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border: 2px solid #E5E7EB;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .radio-option:hover {
+        border-color: #3B82F6;
+        background: #F9FAFB;
+    }
+
+    .radio-option input[type="radio"] {
+        margin-right: 0.75rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+    }
+
+    .radio-option label {
+        cursor: pointer;
+        font-weight: 500;
+        color: #374151;
+    }
+
+    .error {
+        background: #FEE2E2;
+        color: #991B1B;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #EF4444;
+    }
+
+    .error ul {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+
+    .field-errors {
+        color: #DC2626;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .login-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #E5E7EB;
+        color: #6B7280;
+    }
+
+    .login-link a {
+        color: #3B82F6;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .login-link a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 576px) {
+        .register-container {
+            margin: 2rem 1rem;
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="register-header">
+        <div class="register-icon">📝</div>
+        <h1>Create Account</h1>
+        <p style="color: #6B7280;">Start tracking your GCSE progress today!</p>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="error">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Full Name -->
+        <div class="form-group">
+            <label for="id_full_name" class="form-label">{{ form.full_name.label }}</label>
+            {{ form.full_name }}
+            {% if form.full_name.help_text %}
+                <div class="form-help">{{ form.full_name.help_text }}</div>
+            {% endif %}
+            {% if form.full_name.errors %}
+                <div class="field-errors">
+                    {{ form.full_name.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Username -->
+        <div class="form-group">
+            <label for="id_username" class="form-label">{{ form.username.label }}</label>
+            {{ form.username }}
+            {% if form.username.help_text %}
+                <div class="form-help">{{ form.username.help_text }}</div>
+            {% endif %}
+            {% if form.username.errors %}
+                <div class="field-errors">
+                    {{ form.username.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+            <label for="id_email" class="form-label">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% if form.email.help_text %}
+                <div class="form-help">{{ form.email.help_text }}</div>
+            {% endif %}
+            {% if form.email.errors %}
+                <div class="field-errors">
+                    {{ form.email.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Role Selection -->
+        <div class="form-group">
+            <label class="form-label">{{ form.role.label }}</label>
+            <div class="form-radio-group">
+                {% for value, label in form.role.field.choices %}
+                <div class="radio-option">
+                    <input 
+                        type="radio" 
+                        name="role" 
+                        value="{{ value }}" 
+                        id="id_role_{{ forloop.counter }}"
+                        {% if form.role.value == value %}checked{% endif %}
+                        required
+                    >
+                    <label for="id_role_{{ forloop.counter }}">
+                        {{ label }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            {% if form.role.errors %}
+                <div class="field-errors">
+                    {{ form.role.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+            <label for="id_password1" class="form-label">{{ form.password1.label }}</label>
+            {{ form.password1 }}
+            {% if form.password1.help_text %}
+                <div class="form-help">{{ form.password1.help_text }}</div>
+            {% endif %}
+            {% if form.password1.errors %}
+                <div class="field-errors">
+                    {{ form.password1.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="form-group">
+            <label for="id_password2" class="form-label">{{ form.password2.label }}</label>
+            {{ form.password2 }}
+            {% if form.password2.help_text %}
+                <div class="form-help">{{ form.password2.help_text }}</div>
+            {% endif %}
+            {% if form.password2.errors %}
+                <div class="field-errors">
+                    {{ form.password2.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+            Create Account
+        </button>
+    </form>
+
+    <div class="login-link">
+        Already have an account? <a href="{% url 'login' %}">Log in</a>
+    </div>
+</div>
+{% endblock %}

@@ -11,11 +11,12 @@ from .models import (
     Roadmap, RoadmapStep, ChecklistItem, UserProfile, ProgressAlert
 )
 from .ai_service import get_ai_service, RoadmapGenerationError
-from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm
+from .forms import SubjectForm, FeedbackForm, TermGoalForm, StudySessionForm, UserRegistrationForm
 from django.db.models import Sum, Count, Q
 import json
 from datetime import date, timedelta
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import login, authenticate
 
 
 @login_required
@@ -1056,3 +1057,56 @@ def mark_all_alerts_read(request):
         'success': True,
         'count': count
     })
+
+def register(request):
+    """User registration view for students and parents."""
+    # Redirect if already logged in
+    if request.user.is_authenticated:
+        return redirect('tracker:dashboard')
+    
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            # User transaction to ensure User and UserProfile are created together
+            with transaction.atomic():
+                # Create user
+                user = form.save(commit=False)
+                user.email = form.cleaned_data['email']
+                user.save()
+
+                # Create user profile
+                UserProfile.objects.create(
+                    user=user,
+                    role=form.cleaned_data['role'],
+                    full_name=form.cleaned_data['full_name']
+                )
+
+                # Log the user in automatically
+                username = form.cleaned_data.get('username')
+                password = form.cleaned_data.get('password1')
+                user = authenticate(username=username, password=password)
+                login(request, user)
+
+                # Show success message
+                messages.success(
+                    request,
+                    f'Welcome, {form.cleaned_data["full_name"]} ! Your account has been created successfully. 🎉'
+                )
+
+                # Redirect based on role
+                if form.cleaned_data['role'] == 'parent':
+                    messages.info(
+                        request,
+                        'To link your child\'s account, please contact support or have them add you as a parent.'
+                    )
+                    return redirect('tracker:parent_dashboard')
+                else:
+                    return redirect('tracker:dashboard')
+    else:
+        form = UserRegistrationForm()
+
+    context = {
+        'form': form,
+    }
+
+    return render(request, 'tracker/register.html', context)
